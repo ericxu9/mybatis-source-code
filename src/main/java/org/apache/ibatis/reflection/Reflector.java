@@ -112,7 +112,7 @@ public class Reflector {
       if (constructor.getParameterTypes().length == 0) {
         if (canAccessPrivateMethods()) { //是否能访问私有构造方法
           try {
-            constructor.setAccessible(true); //设置为可访问
+            constructor.setAccessible(true); //设置为可访问,如果不成功那也无能为力了，哈哈
           } catch (Exception e) {
             // Ignored. This is only a final precaution, nothing we can do.
           }
@@ -133,7 +133,7 @@ public class Reflector {
       String name = method.getName();
       if (name.startsWith("get") && name.length() > 3) { // get开头且方法名称长度大于3
         if (method.getParameterTypes().length == 0) { //判断无入参才是getter
-          name = PropertyNamer.methodToProperty(name); //截取get后面的内容作为属性名称
+          name = PropertyNamer.methodToProperty(name); //截取get后面的内容作为属性名称，例如getName,最终就是name
           addMethodConflict(conflictingGetters, name, method);
         }
       } else if (name.startsWith("is") && name.length() > 2) { //is开头且方法名称长度大于2
@@ -147,11 +147,12 @@ public class Reflector {
   }
 
   private void resolveGetterConflicts(Map<String, List<Method>> conflictingGetters) {
+    //遍历所有属性名
     for (String propName : conflictingGetters.keySet()) {
       List<Method> getters = conflictingGetters.get(propName);
       Iterator<Method> iterator = getters.iterator();
       Method firstMethod = iterator.next();
-      if (getters.size() == 1) {
+      if (getters.size() == 1) { //get方法只会有一个，只会取无入参的
         addGetMethod(propName, firstMethod);
       } else {
         Method getter = firstMethod;
@@ -180,10 +181,11 @@ public class Reflector {
   }
 
   private void addGetMethod(String name, Method method) {
+    //先校验下属性名是否正常
     if (isValidPropertyName(name)) {
-      getMethods.put(name, new MethodInvoker(method));
-      Type returnType = TypeParameterResolver.resolveReturnType(method, type);
-      getTypes.put(name, typeToClass(returnType));
+      getMethods.put(name, new MethodInvoker(method)); //保存属性对应的方法
+      Type returnType = TypeParameterResolver.resolveReturnType(method, type); //获取方法的返回值类型，会特殊处理泛型等情况
+      getTypes.put(name, typeToClass(returnType));//保存方法对应的返回值，class，比如java.lang.String
     }
   }
 
