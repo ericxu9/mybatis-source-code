@@ -63,8 +63,10 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
         if (!constructor.isAccessible()) {
           constructor.setAccessible(true);
         }
+        //创建无参构造创建对象
         return constructor.newInstance();
       }
+      //根据指定的参数列表查找构造函数，进行创建
       constructor = type.getDeclaredConstructor(constructorArgTypes.toArray(new Class[constructorArgTypes.size()]));
       if (!constructor.isAccessible()) {
         constructor.setAccessible(true);

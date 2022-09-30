@@ -26,6 +26,8 @@ import java.lang.reflect.WildcardType;
 import java.util.Arrays;
 
 /**
+ * 测试用例在
+ * test/java/org.apache.ibatis.reflection.TypeParameterResolverTest
  * @author Iwao AVE!
  */
 public class TypeParameterResolver {
@@ -35,8 +37,12 @@ public class TypeParameterResolver {
    *         they will be resolved to the actual runtime {@link Type}s.
    */
   public static Type resolveFieldType(Field field, Type srcType) {
-    Type fieldType = field.getGenericType();
-    Class<?> declaringClass = field.getDeclaringClass();
+    Type fieldType = field.getGenericType(); //获取字段声明的类型
+    Class<?> declaringClass = field.getDeclaringClass(); //获取字段的类定义
+    //例子 SubClassA<T> extends ClassA<T, T> ，ClassA<K, V>中有个字段 HashMap<K,V> map
+    //fieldType: java.util.Map<K,V>
+    //srcType：字段所在的类, ParameterizedType SubClassA<java.lang.Long>
+    //declaringClass: ClassA
     return resolveType(fieldType, srcType, declaringClass);
   }
 
@@ -67,25 +73,30 @@ public class TypeParameterResolver {
   private static Type resolveType(Type type, Type srcType, Class<?> declaringClass) {
     if (type instanceof TypeVariable) {
       return resolveTypeVar((TypeVariable<?>) type, srcType, declaringClass);
-    } else if (type instanceof ParameterizedType) {
+    } else if (type instanceof ParameterizedType) { //java.util.Map<K,V>
+      //type: java.util.Map<K,V>
+      //srcType: ParameterizedType SubClassA<java.lang.Long>
+      //declaringClass:ClassA
       return resolveParameterizedType((ParameterizedType) type, srcType, declaringClass);
     } else if (type instanceof GenericArrayType) {
       return resolveGenericArrayType((GenericArrayType) type, srcType, declaringClass);
     } else {
-      return type;
+      return type; //class类型
     }
   }
 
   private static Type resolveGenericArrayType(GenericArrayType genericArrayType, Type srcType, Class<?> declaringClass) {
-    Type componentType = genericArrayType.getGenericComponentType();
+    Type componentType = genericArrayType.getGenericComponentType(); //获取数组元素的类型
     Type resolvedComponentType = null;
     if (componentType instanceof TypeVariable) {
       resolvedComponentType = resolveTypeVar((TypeVariable<?>) componentType, srcType, declaringClass);
     } else if (componentType instanceof GenericArrayType) {
+      //递归调用
       resolvedComponentType = resolveGenericArrayType((GenericArrayType) componentType, srcType, declaringClass);
     } else if (componentType instanceof ParameterizedType) {
       resolvedComponentType = resolveParameterizedType((ParameterizedType) componentType, srcType, declaringClass);
     }
+    //根据解析后的数组项类型构造返回类型
     if (resolvedComponentType instanceof Class) {
       return Array.newInstance((Class<?>) resolvedComponentType, 0).getClass();
     } else {
@@ -94,15 +105,18 @@ public class TypeParameterResolver {
   }
 
   private static ParameterizedType resolveParameterizedType(ParameterizedType parameterizedType, Type srcType, Class<?> declaringClass) {
-    Class<?> rawType = (Class<?>) parameterizedType.getRawType();
-    Type[] typeArgs = parameterizedType.getActualTypeArguments();
-    Type[] args = new Type[typeArgs.length];
+    Class<?> rawType = (Class<?>) parameterizedType.getRawType(); // 例如 Map<K,V> ,原始类型为 java.util.Map
+    Type[] typeArgs = parameterizedType.getActualTypeArguments(); // 类型变量为 K、V
+    Type[] args = new Type[typeArgs.length]; //保存解析后的结果
     for (int i = 0; i < typeArgs.length; i++) {
       if (typeArgs[i] instanceof TypeVariable) {
+        // K、V
+        //srcType:ParameterizedType SubClassA<java.lang.Long>
+        //declaringClass:ClassA
         args[i] = resolveTypeVar((TypeVariable<?>) typeArgs[i], srcType, declaringClass);
-      } else if (typeArgs[i] instanceof ParameterizedType) {
+      } else if (typeArgs[i] instanceof ParameterizedType) { //判断是否嵌套了 ParameterizedType
         args[i] = resolveParameterizedType((ParameterizedType) typeArgs[i], srcType, declaringClass);
-      } else if (typeArgs[i] instanceof WildcardType) {
+      } else if (typeArgs[i] instanceof WildcardType) { //判断是否嵌套了 WildcardType
         args[i] = resolveWildcardType((WildcardType) typeArgs[i], srcType, declaringClass);
       } else {
         args[i] = typeArgs[i];
@@ -139,12 +153,13 @@ public class TypeParameterResolver {
     if (srcType instanceof Class) {
       clazz = (Class<?>) srcType;
     } else if (srcType instanceof ParameterizedType) {
-      ParameterizedType parameterizedType = (ParameterizedType) srcType;
-      clazz = (Class<?>) parameterizedType.getRawType();
+      ParameterizedType parameterizedType = (ParameterizedType) srcType; //SubClassA<java.lang.Long>
+      clazz = (Class<?>) parameterizedType.getRawType(); //class SubClassA
     } else {
       throw new IllegalArgumentException("The 2nd arg must be Class or ParameterizedType, but was: " + srcType.getClass());
     }
 
+    //SubClassA != ClassA
     if (clazz == declaringClass) {
       Type[] bounds = typeVar.getBounds();
       if(bounds.length > 0) {
@@ -153,8 +168,14 @@ public class TypeParameterResolver {
       return Object.class;
     }
 
+    //获取SubClassA的父类 = ParameterizedType ClassA<T,T>
     Type superclass = clazz.getGenericSuperclass();
-    result = scanSuperTypes(typeVar, srcType, declaringClass, clazz, superclass);
+    //typeVar = TypeVariable K
+    //srcType = ParameterizedType SubClassA<java.lang.Long>
+    //declaringClass = ClassA
+    //clazz = class SubClassA
+    //superclass = ParameterizedType ClassA<T,T>
+    result = scanSuperTypes(typeVar, srcType, declaringClass, clazz, superclass); //开始递归获取整个集成结构
     if (result != null) {
       return result;
     }
@@ -173,14 +194,14 @@ public class TypeParameterResolver {
     Type result = null;
     if (superclass instanceof ParameterizedType) {
       ParameterizedType parentAsType = (ParameterizedType) superclass;
-      Class<?> parentAsClass = (Class<?>) parentAsType.getRawType();
-      if (declaringClass == parentAsClass) {
-        Type[] typeArgs = parentAsType.getActualTypeArguments();
+      Class<?> parentAsClass = (Class<?>) parentAsType.getRawType(); //class ClassA
+      if (declaringClass == parentAsClass) { //如果定义字段的类等于上级父类
+        Type[] typeArgs = parentAsType.getActualTypeArguments(); // TypeVariable T、T
         TypeVariable<?>[] declaredTypeVars = declaringClass.getTypeParameters();
         for (int i = 0; i < declaredTypeVars.length; i++) {
           if (declaredTypeVars[i] == typeVar) {
             if (typeArgs[i] instanceof TypeVariable) {
-              TypeVariable<?>[] typeParams = clazz.getTypeParameters();
+              TypeVariable<?>[] typeParams = clazz.getTypeParameters(); // TypeVariable T
               for (int j = 0; j < typeParams.length; j++) {
                 if (typeParams[j] == typeArgs[i]) {
                   if (srcType instanceof ParameterizedType) {
