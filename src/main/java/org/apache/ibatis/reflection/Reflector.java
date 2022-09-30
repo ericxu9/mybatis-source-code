@@ -128,7 +128,9 @@ public class Reflector {
   private void addGetMethods(Class<?> cls) {
     //conflictingGetters key=方法名，value=对应的所有方法名系统的Method对象
     Map<String, List<Method>> conflictingGetters = new HashMap<String, List<Method>>();
-    Method[] methods = getClassMethods(cls); // 获取类中所有方法
+    // 1. 获取类中所有方法
+    Method[] methods = getClassMethods(cls);
+    // 2. 按照 JavaBean 规范查询get方法，并记录到 conflictingGetters中
     for (Method method : methods) {
       String name = method.getName();
       if (name.startsWith("get") && name.length() > 3) { // get开头且方法名称长度大于3
@@ -143,6 +145,7 @@ public class Reflector {
         }
       }
     }
+    // 3. 处理conflictingGetters
     resolveGetterConflicts(conflictingGetters);
   }
 
@@ -152,21 +155,22 @@ public class Reflector {
       List<Method> getters = conflictingGetters.get(propName);
       Iterator<Method> iterator = getters.iterator();
       Method firstMethod = iterator.next();
-      if (getters.size() == 1) { //get方法只会有一个，只会取无入参的
+      if (getters.size() == 1) { //该字段只有一个方法，直接添加到getMethods和getTypes集合中
         addGetMethod(propName, firstMethod);
       } else {
-        Method getter = firstMethod;
-        Class<?> getterType = firstMethod.getReturnType();
+        //处理一个字段多个方法，需要比较这些方法的返回值类型，选择getter方法
+        Method getter = firstMethod; //临时变量，用来记录最终合适的Method
+        Class<?> getterType = firstMethod.getReturnType(); //记录返回值类型
         while (iterator.hasNext()) {
           Method method = iterator.next();
           Class<?> methodType = method.getReturnType();
-          if (methodType.equals(getterType)) {
+          if (methodType.equals(getterType)) { //判断方法返回值一样抛异常，前边已经判断过了
             throw new ReflectionException("Illegal overloaded getter method with ambiguous type for property "
                 + propName + " in class " + firstMethod.getDeclaringClass()
                 + ".  This breaks the JavaBeans " + "specification and can cause unpredictable results.");
-          } else if (methodType.isAssignableFrom(getterType)) {
+          } else if (methodType.isAssignableFrom(getterType)) { //getType是methodType的子类，是最合适的
             // OK getter type is descendant
-          } else if (getterType.isAssignableFrom(methodType)) {
+          } else if (getterType.isAssignableFrom(methodType)) { //methodType是getterType的子类，那么重新赋值
             getter = method;
             getterType = methodType;
           } else {
@@ -181,7 +185,7 @@ public class Reflector {
   }
 
   private void addGetMethod(String name, Method method) {
-    //先校验下属性名是否正常
+    //先校验下属性名是否合法
     if (isValidPropertyName(name)) {
       getMethods.put(name, new MethodInvoker(method)); //保存属性对应的方法
       Type returnType = TypeParameterResolver.resolveReturnType(method, type); //获取方法的返回值类型，会特殊处理泛型等情况
@@ -290,6 +294,7 @@ public class Reflector {
   }
 
   private void addFields(Class<?> clazz) {
+    // 获取 class 中所有字段
     Field[] fields = clazz.getDeclaredFields();
     for (Field field : fields) {
       if (canAccessPrivateMethods()) {
@@ -300,7 +305,7 @@ public class Reflector {
         }
       }
       if (field.isAccessible()) {
-        if (!setMethods.containsKey(field.getName())) {
+        if (!setMethods.containsKey(field.getName())) { //判断在 setMethods 中不存在，将属性保存到setMethods 和 setTypes中
           // issue #379 - removed the check for final because JDK 1.5 allows
           // modification of final fields through reflection (JSR-133). (JGB)
           // pr #16 - final static can only be set by the classloader
@@ -309,19 +314,19 @@ public class Reflector {
             addSetField(field);
           }
         }
-        if (!getMethods.containsKey(field.getName())) {
+        if (!getMethods.containsKey(field.getName())) { //判断在 getMethods 中不存在，将属性保存到getMethods 和 getTypes中
           addGetField(field);
         }
       }
     }
-    if (clazz.getSuperclass() != null) {
+    if (clazz.getSuperclass() != null) { // 处理父类中的字段
       addFields(clazz.getSuperclass());
     }
   }
 
   private void addSetField(Field field) {
     if (isValidPropertyName(field.getName())) {
-      setMethods.put(field.getName(), new SetFieldInvoker(field));
+      setMethods.put(field.getName(), new SetFieldInvoker(field)); //将属性封装成 SetFieldInvoker
       Type fieldType = TypeParameterResolver.resolveFieldType(field, type);
       setTypes.put(field.getName(), typeToClass(fieldType));
     }
@@ -352,31 +357,32 @@ public class Reflector {
     Map<String, Method> uniqueMethods = new HashMap<String, Method>();
     Class<?> currentClass = cls;
     while (currentClass != null) {
-      addUniqueMethods(uniqueMethods, currentClass.getDeclaredMethods());
+      addUniqueMethods(uniqueMethods, currentClass.getDeclaredMethods()); //添加currentClass类中所有方法
 
       // we also need to look for interface methods -
       // because the class may be abstract
-      Class<?>[] interfaces = currentClass.getInterfaces();
+      Class<?>[] interfaces = currentClass.getInterfaces(); //获取当前类实现的接口方法
       for (Class<?> anInterface : interfaces) {
         addUniqueMethods(uniqueMethods, anInterface.getMethods());
       }
 
-      currentClass = currentClass.getSuperclass();
+      currentClass = currentClass.getSuperclass(); //开始循环遍历父类中的方法
     }
 
     Collection<Method> methods = uniqueMethods.values();
 
+    //转换成Method[]返回
     return methods.toArray(new Method[methods.size()]);
   }
 
   private void addUniqueMethods(Map<String, Method> uniqueMethods, Method[] methods) {
     for (Method currentMethod : methods) {
-      if (!currentMethod.isBridge()) {
-        String signature = getSignature(currentMethod);
+      if (!currentMethod.isBridge()) { //过滤掉桥接方法 https://blog.csdn.net/gongm24/article/details/121440121
+        String signature = getSignature(currentMethod); //生成方法唯一签名，用来去重
         // check to see if the method is already known
         // if it is known, then an extended class must have
         // overridden a method
-        if (!uniqueMethods.containsKey(signature)) {
+        if (!uniqueMethods.containsKey(signature)) { //不存在才加入
           if (canAccessPrivateMethods()) {
             try {
               currentMethod.setAccessible(true);
@@ -384,16 +390,23 @@ public class Reflector {
               // Ignored. This is only a final precaution, nothing we can do.
             }
           }
-
+          //存起来
           uniqueMethods.put(signature, currentMethod);
         }
       }
     }
   }
 
+  /**
+   * 生成方法唯一签名
+   * 规则：[返回值类型]#[方法名]:参数类型,...
+   * 比如方法 String test(Integer a),则生成的是：java.lang.String#test:java.lang.Integer
+   * @param method
+   * @return
+   */
   private String getSignature(Method method) {
     StringBuilder sb = new StringBuilder();
-    Class<?> returnType = method.getReturnType();
+    Class<?> returnType = method.getReturnType(); //返回值类型
     if (returnType != null) {
       sb.append(returnType.getName()).append('#');
     }
