@@ -18,6 +18,8 @@ package org.apache.ibatis.reflection.property;
 import java.util.Iterator;
 
 /**
+ * 处理表达式，例如
+ * <result property="orders[0].items[0].name" column="item1"></result>
  * @author Clinton Begin
  */
 public class PropertyTokenizer implements Iterator<PropertyTokenizer> {
@@ -27,19 +29,20 @@ public class PropertyTokenizer implements Iterator<PropertyTokenizer> {
   private String children;
 
   public PropertyTokenizer(String fullname) {
-    int delim = fullname.indexOf('.');
+    int delim = fullname.indexOf('.'); //查询.的位置
     if (delim > -1) {
-      name = fullname.substring(0, delim);
-      children = fullname.substring(delim + 1);
+      name = fullname.substring(0, delim);//orders[0]
+      children = fullname.substring(delim + 1);//items[0].name
     } else {
       name = fullname;
       children = null;
     }
+    //indexName = orders[0]
     indexedName = name;
     delim = name.indexOf('[');
     if (delim > -1) {
-      index = name.substring(delim + 1, name.length() - 1);
-      name = name.substring(0, delim);
+      index = name.substring(delim + 1, name.length() - 1); //0
+      name = name.substring(0, delim); //orders
     }
   }
 
