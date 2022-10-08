@@ -32,10 +32,22 @@ import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
  */
 public class MetaObject {
 
+  /**
+   * 原始JavaBean对象
+   */
   private Object originalObject;
   private ObjectWrapper objectWrapper;
+  /**
+   * 用于实例化上面 originalObject 的工厂对象
+   */
   private ObjectFactory objectFactory;
+  /**
+   * 负责创建 ObjectWrapper 的工厂对象
+   */
   private ObjectWrapperFactory objectWrapperFactory;
+  /**
+   * 用于创建并缓存ReflectorFactory对象的工厂对象
+   */
   private ReflectorFactory reflectorFactory;
 
   private MetaObject(Object object, ObjectFactory objectFactory, ObjectWrapperFactory objectWrapperFactory, ReflectorFactory reflectorFactory) {
@@ -44,19 +56,21 @@ public class MetaObject {
     this.objectWrapperFactory = objectWrapperFactory;
     this.reflectorFactory = reflectorFactory;
 
-    if (object instanceof ObjectWrapper) {
+    if (object instanceof ObjectWrapper) { //若原始对象是ObjectWrapper，则直接使用
       this.objectWrapper = (ObjectWrapper) object;
-    } else if (objectWrapperFactory.hasWrapperFor(object)) {
+    } else if (objectWrapperFactory.hasWrapperFor(object)) { //DefaultObjectWrapperFactory的hasWrapperFor始终返回false，用户可以自定义ObjectWrapperFactory实现扩展
       this.objectWrapper = objectWrapperFactory.getWrapperFor(this, object);
-    } else if (object instanceof Map) {
+    } else if (object instanceof Map) { // 原始对象为Map
       this.objectWrapper = new MapWrapper(this, (Map) object);
-    } else if (object instanceof Collection) {
+    } else if (object instanceof Collection) { //原始对象是 Collection
       this.objectWrapper = new CollectionWrapper(this, (Collection) object);
     } else {
+      // 原始对象是普通javabean
       this.objectWrapper = new BeanWrapper(this, object);
     }
   }
 
+  /** 构建方法是private的，这里只能通过 forObject来创建 MetaObject对象 */
   public static MetaObject forObject(Object object, ObjectFactory objectFactory, ObjectWrapperFactory objectWrapperFactory, ReflectorFactory reflectorFactory) {
     if (object == null) {
       return SystemMetaObject.NULL_META_OBJECT;

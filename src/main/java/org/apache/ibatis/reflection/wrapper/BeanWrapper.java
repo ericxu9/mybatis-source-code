@@ -27,6 +27,7 @@ import org.apache.ibatis.reflection.invoker.Invoker;
 import org.apache.ibatis.reflection.property.PropertyTokenizer;
 
 /**
+ * 通过MetaClass来获取，hasSetter等方法
  * @author Clinton Begin
  */
 public class BeanWrapper extends BaseWrapper {
@@ -42,10 +43,10 @@ public class BeanWrapper extends BaseWrapper {
 
   @Override
   public Object get(PropertyTokenizer prop) {
-    if (prop.getIndex() != null) {
+    if (prop.getIndex() != null) { // index不为空，说明是集合类型
       Object collection = resolveCollection(prop, object);
-      return getCollectionValue(prop, collection);
-    } else {
+      return getCollectionValue(prop, collection); // 获取集合中对应index的信息
+    } else { // 不存在index信息，则为普通对象，查找并调用 Invoker 相关方法获取属性
       return getBeanProperty(prop, object);
     }
   }
@@ -159,9 +160,9 @@ public class BeanWrapper extends BaseWrapper {
 
   private Object getBeanProperty(PropertyTokenizer prop, Object object) {
     try {
-      Invoker method = metaClass.getGetInvoker(prop.getName());
+      Invoker method = metaClass.getGetInvoker(prop.getName()); // 获取属性名对应的方法
       try {
-        return method.invoke(object, NO_ARGUMENTS);
+        return method.invoke(object, NO_ARGUMENTS); // 调用方法获取返回值
       } catch (Throwable t) {
         throw ExceptionUtil.unwrapThrowable(t);
       }
