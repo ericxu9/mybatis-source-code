@@ -33,10 +33,12 @@ import org.apache.ibatis.io.ResolverUtil;
 import org.apache.ibatis.io.Resources;
 
 /**
+ * 别名注册
  * @author Clinton Begin
  */
 public class TypeAliasRegistry {
 
+  //保存别名对应的类
   private final Map<String, Class<?>> TYPE_ALIASES = new HashMap<String, Class<?>>();
 
   public TypeAliasRegistry() {
@@ -139,21 +141,22 @@ public class TypeAliasRegistry {
   }
 
   public void registerAlias(Class<?> type) {
-    String alias = type.getSimpleName();
-    Alias aliasAnnotation = type.getAnnotation(Alias.class);
+    String alias = type.getSimpleName(); //类的名称，不包含包名
+    Alias aliasAnnotation = type.getAnnotation(Alias.class); //获取@Alias注解
     if (aliasAnnotation != null) {
       alias = aliasAnnotation.value();
     } 
-    registerAlias(alias, type);
+    registerAlias(alias, type); //存储到TYPE_ALIASES Map中
   }
 
+  // 注册别名
   public void registerAlias(String alias, Class<?> value) {
     if (alias == null) {
       throw new TypeException("The parameter alias cannot be null");
     }
     // issue #748
-    String key = alias.toLowerCase(Locale.ENGLISH);
-    if (TYPE_ALIASES.containsKey(key) && TYPE_ALIASES.get(key) != null && !TYPE_ALIASES.get(key).equals(value)) {
+    String key = alias.toLowerCase(Locale.ENGLISH); //转换成小写
+    if (TYPE_ALIASES.containsKey(key) && TYPE_ALIASES.get(key) != null && !TYPE_ALIASES.get(key).equals(value)) { //如果重复直接抛异常
       throw new TypeException("The alias '" + alias + "' is already mapped to the value '" + TYPE_ALIASES.get(key).getName() + "'.");
     }
     TYPE_ALIASES.put(key, value);
