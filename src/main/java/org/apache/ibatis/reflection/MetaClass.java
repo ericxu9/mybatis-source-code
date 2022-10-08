@@ -27,6 +27,8 @@ import org.apache.ibatis.reflection.invoker.MethodInvoker;
 import org.apache.ibatis.reflection.property.PropertyTokenizer;
 
 /**
+ * 通过 Reflector 和 PropertyTokenizer组合使用
+ * 对类级别的源信息的封装和处理
  * @author Clinton Begin
  */
 public class MetaClass {
@@ -34,6 +36,7 @@ public class MetaClass {
   private ReflectorFactory reflectorFactory;
   private Reflector reflector;
 
+  //给指定的class创建相应的reflector对象
   private MetaClass(Class<?> type, ReflectorFactory reflectorFactory) {
 	this.reflectorFactory = reflectorFactory;
     this.reflector = reflectorFactory.findForClass(type);
@@ -44,11 +47,12 @@ public class MetaClass {
   }
 
   public MetaClass metaClassForProperty(String name) {
-    Class<?> propType = reflector.getGetterType(name);
+    Class<?> propType = reflector.getGetterType(name); //查找指定属性对应的class
     return MetaClass.forClass(propType, reflectorFactory);
   }
 
   public String findProperty(String name) {
+    //跟一下buildProperty
     StringBuilder prop = buildProperty(name, new StringBuilder());
     return prop.length() > 0 ? prop.toString() : null;
   }
@@ -95,11 +99,11 @@ public class MetaClass {
 
   private Class<?> getGetterType(PropertyTokenizer prop) {
     Class<?> type = reflector.getGetterType(prop.getName());
-    if (prop.getIndex() != null && Collection.class.isAssignableFrom(type)) {
-      Type returnType = getGenericGetterType(prop.getName());
-      if (returnType instanceof ParameterizedType) {
-        Type[] actualTypeArguments = ((ParameterizedType) returnType).getActualTypeArguments();
-        if (actualTypeArguments != null && actualTypeArguments.length == 1) {
+    if (prop.getIndex() != null && Collection.class.isAssignableFrom(type)) { //该表达式使用了[]，并且是Collection的子类
+      Type returnType = getGenericGetterType(prop.getName()); //判断是method还是field，因为field会封装成GetFieldInvoker
+      if (returnType instanceof ParameterizedType) { //针对泛型集合进行处理
+        Type[] actualTypeArguments = ((ParameterizedType) returnType).getActualTypeArguments(); //获取泛型参数
+        if (actualTypeArguments != null && actualTypeArguments.length == 1) { //只处理一个参数的，所以Map肯定就排除了.
           returnType = actualTypeArguments[0];
           if (returnType instanceof Class) {
             type = (Class<?>) returnType;
@@ -114,6 +118,7 @@ public class MetaClass {
 
   private Type getGenericGetterType(String propertyName) {
     try {
+      //因为字段也会保存到里面，会封装成GetFieldInvoker，所以下面进行了判断
       Invoker invoker = reflector.getGetInvoker(propertyName);
       if (invoker instanceof MethodInvoker) {
         Field _method = MethodInvoker.class.getDeclaredField("method");
@@ -169,16 +174,17 @@ public class MetaClass {
   }
 
   private StringBuilder buildProperty(String name, StringBuilder builder) {
-    PropertyTokenizer prop = new PropertyTokenizer(name);
-    if (prop.hasNext()) {
+    PropertyTokenizer prop = new PropertyTokenizer(name); //解析表达式
+    if (prop.hasNext()) { //是否有下一个表达式
+      //查找prop name对应的属性
       String propertyName = reflector.findPropertyName(prop.getName());
       if (propertyName != null) {
-        builder.append(propertyName);
+        builder.append(propertyName); //追加属性名和.
         builder.append(".");
-        MetaClass metaProp = metaClassForProperty(propertyName);
-        metaProp.buildProperty(prop.getChildren(), builder);
+        MetaClass metaProp = metaClassForProperty(propertyName); //创建MetaClass对象
+        metaProp.buildProperty(prop.getChildren(), builder); //递归创建下级child表达式
       }
-    } else {
+    } else { //递归出口
       String propertyName = reflector.findPropertyName(name);
       if (propertyName != null) {
         builder.append(propertyName);
