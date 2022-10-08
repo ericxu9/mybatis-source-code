@@ -44,21 +44,21 @@ public final class PreparedStatementLogger extends BaseJdbcLogger implements Inv
   @Override
   public Object invoke(Object proxy, Method method, Object[] params) throws Throwable {
     try {
-      if (Object.class.equals(method.getDeclaringClass())) {
+      if (Object.class.equals(method.getDeclaringClass())) { // 如果该方法是继承自Object的，直接调用，比如toString之类的
         return method.invoke(this, params);
       }          
-      if (EXECUTE_METHODS.contains(method.getName())) {
+      if (EXECUTE_METHODS.contains(method.getName())) { //如果是调用的sql执行相关的方法
         if (isDebugEnabled()) {
-          debug("Parameters: " + getParameterValueString(), true);
+          debug("Parameters: " + getParameterValueString(), true); //打印参数
         }
-        clearColumnInfo();
-        if ("executeQuery".equals(method.getName())) {
+        clearColumnInfo(); //清除参数
+        if ("executeQuery".equals(method.getName())) { //如果是执行查询方法，则为ResultSet创建代理对象
           ResultSet rs = (ResultSet) method.invoke(statement, params);
           return rs == null ? null : ResultSetLogger.newInstance(rs, statementLog, queryStack);
         } else {
           return method.invoke(statement, params);
         }
-      } else if (SET_METHODS.contains(method.getName())) {
+      } else if (SET_METHODS.contains(method.getName())) { //set相关的方法，保存Column数据
         if ("setNull".equals(method.getName())) {
           setColumn(params[0], null);
         } else {
@@ -68,7 +68,7 @@ public final class PreparedStatementLogger extends BaseJdbcLogger implements Inv
       } else if ("getResultSet".equals(method.getName())) {
         ResultSet rs = (ResultSet) method.invoke(statement, params);
         return rs == null ? null : ResultSetLogger.newInstance(rs, statementLog, queryStack);
-      } else if ("getUpdateCount".equals(method.getName())) {
+      } else if ("getUpdateCount".equals(method.getName())) { // getUpdateCount 方法，输出更新数量结果
         int updateCount = (Integer) method.invoke(statement, params);
         if (updateCount != -1) {
           debug("   Updates: " + updateCount, false);
@@ -90,6 +90,7 @@ public final class PreparedStatementLogger extends BaseJdbcLogger implements Inv
    * @return - the proxy
    */
   public static PreparedStatement newInstance(PreparedStatement stmt, Log statementLog, int queryStack) {
+    // 使用JDK动态代理创建代理对象
     InvocationHandler handler = new PreparedStatementLogger(stmt, statementLog, queryStack);
     ClassLoader cl = PreparedStatement.class.getClassLoader();
     return (PreparedStatement) Proxy.newProxyInstance(cl, new Class[]{PreparedStatement.class, CallableStatement.class}, handler);
