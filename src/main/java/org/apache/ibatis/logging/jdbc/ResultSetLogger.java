@@ -37,10 +37,15 @@ import org.apache.ibatis.reflection.ExceptionUtil;
  */
 public final class ResultSetLogger extends BaseJdbcLogger implements InvocationHandler {
 
+  // 定义超大长度的字段类型
   private static Set<Integer> BLOB_TYPES = new HashSet<Integer>();
+  // 是否是ResultSet结果集第一行
   private boolean first = true;
+  // 总行数
   private int rows;
+  // 原始ResultSet对象
   private ResultSet rs;
+  // 记录超大长度类型的列号
   private Set<Integer> blobColumns = new HashSet<Integer>();
 
   static {
@@ -66,19 +71,21 @@ public final class ResultSetLogger extends BaseJdbcLogger implements InvocationH
         return method.invoke(this, params);
       }    
       Object o = method.invoke(rs, params);
-      if ("next".equals(method.getName())) {
-        if (((Boolean) o)) {
-          rows++;
+      if ("next".equals(method.getName())) { // 处理ResultSet 的 next() 方法
+        if (((Boolean) o)) { // 是否存在下一行
+          rows++; // 行数自增
           if (isTraceEnabled()) {
             ResultSetMetaData rsmd = rs.getMetaData();
             final int columnCount = rsmd.getColumnCount();
-            if (first) {
+            if (first) { // 如果是第一行，则日志打印表头
               first = false;
               printColumnHeaders(rsmd, columnCount);
             }
+            // 输出行记录，会过滤掉blob类型的记录
             printColumnValues(columnCount);
           }
         } else {
+          // 查询完毕，打印总数
           debug("     Total: " + rows, false);
         }
       }
@@ -130,6 +137,7 @@ public final class ResultSetLogger extends BaseJdbcLogger implements InvocationH
 
   /*
    * Creates a logging version of a ResultSet
+   * 创建动态代理对象
    *
    * @param rs - the ResultSet to proxy
    * @return - the ResultSet with logging
