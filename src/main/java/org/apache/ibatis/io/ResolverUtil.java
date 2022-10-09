@@ -71,6 +71,7 @@ public class ResolverUtil<T> {
      * Will be called repeatedly with candidate classes. Must return True if a class
      * is to be included in the results, false otherwise.
      */
+    // 参数type是待检测的类，如果符合条件则返回true
     boolean matches(Class<?> type);
   }
 
@@ -78,6 +79,7 @@ public class ResolverUtil<T> {
    * A Test that checks to see if each class is assignable to the provided class. Note
    * that this test will match the parent type itself if it is presented for matching.
    */
+  // 用于检测类是否继承了指定的类或接口
   public static class IsA implements Test {
     private Class<?> parent;
 
@@ -102,6 +104,7 @@ public class ResolverUtil<T> {
    * A Test that checks to see if each class is annotated with a specific annotation. If it
    * is, then the test returns true, otherwise false.
    */
+  // 类是否添加了指定的注解
   public static class AnnotatedWith implements Test {
     private Class<? extends Annotation> annotation;
 
@@ -214,13 +217,13 @@ public class ResolverUtil<T> {
    *        classes, e.g. {@code net.sourceforge.stripes}
    */
   public ResolverUtil<T> find(Test test, String packageName) {
-    String path = getPackagePath(packageName);
+    String path = getPackagePath(packageName); // 根据报名获取对应的路径，把. 换成了 /
 
     try {
-      List<String> children = VFS.getInstance().list(path);
+      List<String> children = VFS.getInstance().list(path); // 查找path下所有资源
       for (String child : children) {
         if (child.endsWith(".class")) {
-          addIfMatching(test, child);
+          addIfMatching(test, child); // 检测符合Test条件的
         }
       }
     } catch (IOException ioe) {
@@ -250,14 +253,15 @@ public class ResolverUtil<T> {
   @SuppressWarnings("unchecked")
   protected void addIfMatching(Test test, String fqn) {
     try {
+      // 找到完全限定名，包名+类名
       String externalName = fqn.substring(0, fqn.indexOf('.')).replace('/', '.');
-      ClassLoader loader = getClassLoader();
+      ClassLoader loader = getClassLoader(); // 获取类加载器，如果优先使用 setClassLoader指定的类，如果没有则使用当前线程用的classloader
       if (log.isDebugEnabled()) {
         log.debug("Checking to see if class " + externalName + " matches criteria [" + test + "]");
       }
 
-      Class<?> type = loader.loadClass(externalName);
-      if (test.matches(type)) {
+      Class<?> type = loader.loadClass(externalName); //加载类
+      if (test.matches(type)) { // 符合条件的加入到集合中
         matches.add((Class<T>) type);
       }
     } catch (Throwable t) {
