@@ -25,11 +25,12 @@ import java.net.URL;
  */
 public class ClassLoaderWrapper {
 
-  ClassLoader defaultClassLoader;
-  ClassLoader systemClassLoader;
+  ClassLoader defaultClassLoader; // 应用指定的默认类加载器
+  ClassLoader systemClassLoader; // System ClassLoader 或者叫做 App ClassLoader
 
   ClassLoaderWrapper() {
     try {
+      // 初始化systemClassLoader
       systemClassLoader = ClassLoader.getSystemClassLoader();
     } catch (SecurityException ignored) {
       // AccessControlException on Google App Engine   
@@ -139,22 +140,22 @@ public class ClassLoaderWrapper {
 
     URL url;
 
-    for (ClassLoader cl : classLoader) {
+    for (ClassLoader cl : classLoader) { // 按照顺序遍历所有类加载器
 
       if (null != cl) {
 
         // look for the resource as passed in...
-        url = cl.getResource(resource);
+        url = cl.getResource(resource); // 通过类加载器查找资源
 
         // ...but some class loaders want this leading "/", so we'll add it
         // and try again if we didn't find the resource
-        if (null == url) {
+        if (null == url) { // 上面如果没有查询到，加上 / 开头再次尝试查找一次
           url = cl.getResource("/" + resource);
         }
 
         // "It's always in the last place I look for it!"
         // ... because only an idiot would keep looking for it after finding it, so stop looking already.
-        if (null != url) {
+        if (null != url) { // 查找到了资源
           return url;
         }
 
@@ -201,13 +202,14 @@ public class ClassLoaderWrapper {
 
   }
 
+  // 类加载器使用顺序
   ClassLoader[] getClassLoaders(ClassLoader classLoader) {
     return new ClassLoader[]{
-        classLoader,
-        defaultClassLoader,
-        Thread.currentThread().getContextClassLoader(),
-        getClass().getClassLoader(),
-        systemClassLoader};
+        classLoader, // 参数指定的类加载器
+        defaultClassLoader, // 系统指定的默认加载器
+        Thread.currentThread().getContextClassLoader(), // 当前线程绑定的类加载器
+        getClass().getClassLoader(), // 加载当前类所有的类加载器
+        systemClassLoader}; // System classloader
   }
 
 }
