@@ -58,7 +58,7 @@ public class DefaultVFS extends VFS {
 
       // First, try to find the URL of a JAR file containing the requested resource. If a JAR
       // file is found, then we'll list child resources by reading the JAR.
-      URL jarUrl = findJarForResource(url);
+      URL jarUrl = findJarForResource(url); // 如果url指定的资源在一个jar包中，则获取该jar包对应的url
       if (jarUrl != null) {
         is = jarUrl.openStream();
         if (log.isDebugEnabled()) {

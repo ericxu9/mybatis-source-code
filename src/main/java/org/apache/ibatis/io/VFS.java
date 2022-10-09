@@ -36,9 +36,11 @@ public abstract class VFS {
   private static final Log log = LogFactory.getLog(VFS.class);
 
   /** The built-in implementations. */
+  // VFS 实现类
   public static final Class<?>[] IMPLEMENTATIONS = { JBoss6VFS.class, DefaultVFS.class };
 
   /** The list to which implementations are added by {@link #addImplClass(Class)}. */
+  // 用户自定义的 VFS实现类，通过 addImplClass 类添加
   public static final List<Class<? extends VFS>> USER_IMPLEMENTATIONS = new ArrayList<Class<? extends VFS>>();
 
   /** Singleton instance. */
@@ -54,7 +56,7 @@ public abstract class VFS {
       return instance;
     }
 
-    // Try the user implementations first, then the built-ins
+    // 优先使用用户自定义的实现类，然后在使用预先定义好的
     List<Class<? extends VFS>> impls = new ArrayList<Class<? extends VFS>>();
     impls.addAll(USER_IMPLEMENTATIONS);
     impls.addAll(Arrays.asList((Class<? extends VFS>[]) IMPLEMENTATIONS));
