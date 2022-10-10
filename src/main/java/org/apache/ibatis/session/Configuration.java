@@ -138,6 +138,7 @@ public class Configuration {
    */
   protected Class<?> configurationFactory;
 
+  // 存储mapper信息
   protected final MapperRegistry mapperRegistry = new MapperRegistry(this);
   protected final InterceptorChain interceptorChain = new InterceptorChain();
   protected final TypeHandlerRegistry typeHandlerRegistry = new TypeHandlerRegistry();

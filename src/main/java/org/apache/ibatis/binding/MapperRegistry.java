@@ -27,26 +27,32 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ * 保存所有mapper信息
  * @author Clinton Begin
  * @author Eduardo Macarron
  * @author Lasse Voss
  */
 public class MapperRegistry {
 
+  // Configuration对象，MyBatis全局唯一的配置对象，包含所有配置信息
   private final Configuration config;
+  // 记录 Mapper 接口与对应 MapperProxyFactory 之间的关系
   private final Map<Class<?>, MapperProxyFactory<?>> knownMappers = new HashMap<Class<?>, MapperProxyFactory<?>>();
 
   public MapperRegistry(Configuration config) {
     this.config = config;
   }
 
+  // 获取Mapper
   @SuppressWarnings("unchecked")
   public <T> T getMapper(Class<T> type, SqlSession sqlSession) {
+    // 从 Map 中找到 MapperProxyFactory
     final MapperProxyFactory<T> mapperProxyFactory = (MapperProxyFactory<T>) knownMappers.get(type);
-    if (mapperProxyFactory == null) {
+    if (mapperProxyFactory == null) { // 没有找到直接抛出异常
       throw new BindingException("Type " + type + " is not known to the MapperRegistry.");
     }
     try {
+      // 创建爱你实现了 type 接口的代理对象
       return mapperProxyFactory.newInstance(sqlSession);
     } catch (Exception e) {
       throw new BindingException("Error getting mapper instance. Cause: " + e, e);
@@ -57,17 +63,20 @@ public class MapperRegistry {
     return knownMappers.containsKey(type);
   }
 
+  // 添加Mapper 到 map 中
   public <T> void addMapper(Class<T> type) {
-    if (type.isInterface()) {
-      if (hasMapper(type)) {
+    if (type.isInterface()) { // 检测 type 是否是接口
+      if (hasMapper(type)) { // 检测是否添加过了
         throw new BindingException("Type " + type + " is already known to the MapperRegistry.");
       }
       boolean loadCompleted = false;
       try {
+        // 将Mapper对应的class对象和 MapperProxyFactory添加到map中
         knownMappers.put(type, new MapperProxyFactory<T>(type));
         // It's important that the type is added before the parser is run
         // otherwise the binding may automatically be attempted by the
         // mapper parser. If the type is already known, it won't try.
+        // 解析xml
         MapperAnnotationBuilder parser = new MapperAnnotationBuilder(config, type);
         parser.parse();
         loadCompleted = true;
