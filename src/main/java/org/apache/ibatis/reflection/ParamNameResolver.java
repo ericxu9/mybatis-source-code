@@ -60,41 +60,45 @@ public class ParamNameResolver {
    * <li>aMethod(int a, RowBounds rb, int b) -&gt; {{0, "0"}, {2, "1"}}</li>
    * </ul>
    */
+  // 存储方法参数 key 为 参数index，value为参数名称
   private final SortedMap<Integer, String> names;
 
+  // 方法上是否有 @Param 注解
   private boolean hasParamAnnotation;
 
   public ParamNameResolver(Configuration config, Method method) {
-    final Class<?>[] paramTypes = method.getParameterTypes();
-    final Annotation[][] paramAnnotations = method.getParameterAnnotations();
+    final Class<?>[] paramTypes = method.getParameterTypes(); // 获取方法所有参数的类型
+    final Annotation[][] paramAnnotations = method.getParameterAnnotations(); // 获取每个参数上的注解
     final SortedMap<Integer, String> map = new TreeMap<Integer, String>();
     int paramCount = paramAnnotations.length;
     // get names from @Param annotations
     for (int paramIndex = 0; paramIndex < paramCount; paramIndex++) {
-      if (isSpecialParameter(paramTypes[paramIndex])) {
+      if (isSpecialParameter(paramTypes[paramIndex])) { // 如果参数类型是 RowBounds 或者 ResultHandler 则跳过
         // skip special parameters
         continue;
       }
       String name = null;
+      // 遍历所有参数上的注解
       for (Annotation annotation : paramAnnotations[paramIndex]) {
-        if (annotation instanceof Param) {
+        if (annotation instanceof Param) { // 只要有 @Param ， 就将 hasParamAnnotation 设置为 true
           hasParamAnnotation = true;
-          name = ((Param) annotation).value();
+          name = ((Param) annotation).value(); // 获取 @Param 的 value值
           break;
         }
       }
       if (name == null) {
         // @Param was not specified.
+        // 该参数没有对应的 @Param 注解，则根据配置决定是否使用参数的实际名称作为名称
         if (config.isUseActualParamName()) {
           name = getActualParamName(method, paramIndex);
         }
-        if (name == null) {
+        if (name == null) { // 使用参数索引作为名称
           // use the parameter index as the name ("0", "1", ...)
           // gcode issue #71
           name = String.valueOf(map.size());
         }
       }
-      map.put(paramIndex, name);
+      map.put(paramIndex, name); // 缓存到map中
     }
     names = Collections.unmodifiableSortedMap(map);
   }
@@ -132,18 +136,21 @@ public class ParamNameResolver {
    */
   public Object getNamedParams(Object[] args) {
     final int paramCount = names.size();
-    if (args == null || paramCount == 0) {
+    if (args == null || paramCount == 0) { // 无参数，返回null
       return null;
-    } else if (!hasParamAnnotation && paramCount == 1) {
+    } else if (!hasParamAnnotation && paramCount == 1) { // 没有 @Param 注解，并且只有一个参数
       return args[names.firstKey()];
-    } else {
+    } else { // 处理使用 @Param 注解指定了参数名或有多个参数的情况
       final Map<String, Object> param = new ParamMap<Object>();
       int i = 0;
       for (Map.Entry<Integer, String> entry : names.entrySet()) {
+        // 将参数名和实参对应关系保存起来
         param.put(entry.getValue(), args[entry.getKey()]);
         // add generic param names (param1, param2, ...)
+        // 生成默认参数名称，param1，param2...
         final String genericParamName = GENERIC_NAME_PREFIX + String.valueOf(i + 1);
         // ensure not to overwrite parameter named with @Param
+        // 如果 @Param 注解指定的参数名就是 param + 索引格式的，则不需要添加
         if (!names.containsValue(genericParamName)) {
           param.put(genericParamName, args[entry.getKey()]);
         }

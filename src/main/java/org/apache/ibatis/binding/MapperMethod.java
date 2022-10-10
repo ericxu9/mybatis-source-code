@@ -35,13 +35,16 @@ import java.lang.reflect.Type;
 import java.util.*;
 
 /**
+ * Mapper 接口方法执行
  * @author Clinton Begin
  * @author Eduardo Macarron
  * @author Lasse Voss
  */
 public class MapperMethod {
 
+  // 记录 sql 语句和类型
   private final SqlCommand command;
+  // Mapper 接口对应的方法相关信息
   private final MethodSignature method;
 
   public MapperMethod(Class<?> mapperInterface, Method method, Configuration config) {
@@ -208,28 +211,32 @@ public class MapperMethod {
 
   public static class SqlCommand {
 
+    // sql 语句名称
     private final String name;
+    // 操作类型，INSERT、DELETE 等
     private final SqlCommandType type;
 
     public SqlCommand(Configuration configuration, Class<?> mapperInterface, Method method) {
+      // SQL语句的名称是：Mapper 接口名称.方法名
       String statementName = mapperInterface.getName() + "." + method.getName();
       MappedStatement ms = null;
-      if (configuration.hasStatement(statementName)) {
+      if (configuration.hasStatement(statementName)) { // 检测是否有该名称的SQL语句
         ms = configuration.getMappedStatement(statementName);
-      } else if (!mapperInterface.equals(method.getDeclaringClass())) { // issue #35
+      } else if (!mapperInterface.equals(method.getDeclaringClass())) { // issue #35 指定的方法在父接口中定义，进行继承结构处理
         String parentStatementName = method.getDeclaringClass().getName() + "." + method.getName();
         if (configuration.hasStatement(parentStatementName)) {
           ms = configuration.getMappedStatement(parentStatementName);
         }
       }
       if (ms == null) {
-        if(method.getAnnotation(Flush.class) != null){
+        if(method.getAnnotation(Flush.class) != null){ // 处理 方法上的 @Flush 注解
           name = null;
           type = SqlCommandType.FLUSH;
         } else {
           throw new BindingException("Invalid bound statement (not found): " + statementName);
         }
       } else {
+        // 初始化 name 和 tyep
         name = ms.getId();
         type = ms.getSqlCommandType();
         if (type == SqlCommandType.UNKNOWN) {
@@ -249,14 +256,15 @@ public class MapperMethod {
 
   public static class MethodSignature {
 
-    private final boolean returnsMany;
-    private final boolean returnsMap;
-    private final boolean returnsVoid;
-    private final boolean returnsCursor;
-    private final Class<?> returnType;
-    private final String mapKey;
-    private final Integer resultHandlerIndex;
-    private final Integer rowBoundsIndex;
+    private final boolean returnsMany; // 返回类型是否为Collection类型或是数组类型
+    private final boolean returnsMap; // 返回类型是否是Map类型
+    private final boolean returnsVoid; // 返回类型是否是Void
+    private final boolean returnsCursor; // 返回值是否是Cursor类型
+    private final Class<?> returnType; // 返回值类型
+    private final String mapKey; // 如果返回值为Map，则该字段记录了作为key的列名
+    private final Integer resultHandlerIndex; // 用来标记该方法参数列表中ResultHandler类型参数的位置
+    private final Integer rowBoundsIndex;  // 用来标记该方法参数列表中RowBounds类型参数的位置
+    // 方法参数名解析
     private final ParamNameResolver paramNameResolver;
 
     public MethodSignature(Configuration configuration, Class<?> mapperInterface, Method method) {
