@@ -41,20 +41,21 @@ public class PooledDataSource implements DataSource {
 
   private static final Log log = LogFactory.getLog(PooledDataSource.class);
 
+  // 管理PoolConnection 对象状态的组件，通过两个ArrayList控制
   private final PoolState state = new PoolState(this);
 
   private final UnpooledDataSource dataSource;
 
   // OPTIONAL CONFIGURATION FIELDS
-  protected int poolMaximumActiveConnections = 10;
-  protected int poolMaximumIdleConnections = 5;
-  protected int poolMaximumCheckoutTime = 20000;
-  protected int poolTimeToWait = 20000;
-  protected String poolPingQuery = "NO PING QUERY SET";
-  protected boolean poolPingEnabled;
-  protected int poolPingConnectionsNotUsedFor;
+  protected int poolMaximumActiveConnections = 10; // 最大活跃连接数
+  protected int poolMaximumIdleConnections = 5; // 最大空闲连接数
+  protected int poolMaximumCheckoutTime = 20000; // 最大checkout时长
+  protected int poolTimeToWait = 20000; // 在无法获取连接时，需要等待的时间
+  protected String poolPingQuery = "NO PING QUERY SET"; // 在检测一个数据库连接是否可用时，会给数据库发送测试SQL语句
+  protected boolean poolPingEnabled; // 是否允许发送测试SQL语句
+  protected int poolPingConnectionsNotUsedFor; // 当连接超过poolPingConnectionsNotUsedFor毫秒未使用时，会发送一次测试SQL语句，检测连接是否正常
 
-  private int expectedConnectionTypeCode;
+  private int expectedConnectionTypeCode; // 根据数据库的URL、用户名和密码生成的一个hash值，该哈希值用于标志着当前的连接池，在构造函数中初始化
 
   public PooledDataSource() {
     dataSource = new UnpooledDataSource();
@@ -325,6 +326,7 @@ public class PooledDataSource implements DataSource {
     return ("" + url + username + password).hashCode();
   }
 
+
   protected void pushConnection(PooledConnection conn) throws SQLException {
 
     synchronized (state) {
@@ -372,15 +374,15 @@ public class PooledDataSource implements DataSource {
 
     while (conn == null) {
       synchronized (state) {
-        if (!state.idleConnections.isEmpty()) {
+        if (!state.idleConnections.isEmpty()) { // 当前空闲连接不为空
           // Pool has available connection
-          conn = state.idleConnections.remove(0);
+          conn = state.idleConnections.remove(0); // 取出第0个下标的连接
           if (log.isDebugEnabled()) {
             log.debug("Checked out connection " + conn.getRealHashCode() + " from pool.");
           }
         } else {
           // Pool does not have available connection
-          if (state.activeConnections.size() < poolMaximumActiveConnections) {
+          if (state.activeConnections.size() < poolMaximumActiveConnections) { // 活跃连接数量未超过最大值，创建PooledConnection
             // Can create new connection
             conn = new PooledConnection(dataSource.getConnection(), this);
             if (log.isDebugEnabled()) {
@@ -388,9 +390,10 @@ public class PooledDataSource implements DataSource {
             }
           } else {
             // Cannot create new connection
-            PooledConnection oldestActiveConnection = state.activeConnections.get(0);
+            // 获取连接数量已超过最大值，检查是否有超时连接
+            PooledConnection oldestActiveConnection = state.activeConnections.get(0); // 取出第一个连接
             long longestCheckoutTime = oldestActiveConnection.getCheckoutTime();
-            if (longestCheckoutTime > poolMaximumCheckoutTime) {
+            if (longestCheckoutTime > poolMaximumCheckoutTime) { // 有超时连接，移除掉
               // Can claim overdue connection
               state.claimedOverdueConnectionCount++;
               state.accumulatedCheckoutTimeOfOverdueConnections += longestCheckoutTime;
@@ -412,6 +415,7 @@ public class PooledDataSource implements DataSource {
               }
             } else {
               // Must wait
+              // 没有超时连接，开始阻塞
               try {
                 if (!countedWait) {
                   state.hadToWaitCount++;
@@ -430,8 +434,8 @@ public class PooledDataSource implements DataSource {
           }
         }
         if (conn != null) {
-          if (conn.isValid()) {
-            if (!conn.getRealConnection().getAutoCommit()) {
+          if (conn.isValid()) { // 校验连接是否有效
+            if (!conn.getRealConnection().getAutoCommit()) { // 如果没有启用自动提交，则手动进行回滚
               conn.getRealConnection().rollback();
             }
             conn.setConnectionTypeCode(assembleConnectionTypeCode(dataSource.getUrl(), username, password));

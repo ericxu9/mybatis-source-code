@@ -36,24 +36,27 @@ import org.apache.ibatis.io.Resources;
  * @author Eduardo Macarron
  */
 public class UnpooledDataSource implements DataSource {
-  
+
+  // 加载Driver类的classloader
   private ClassLoader driverClassLoader;
+  // 连接驱动相关配置
   private Properties driverProperties;
+  // 缓存所有已注册数据库连接驱动
   private static Map<String, Driver> registeredDrivers = new ConcurrentHashMap<String, Driver>();
 
-  private String driver;
-  private String url;
-  private String username;
-  private String password;
+  private String driver; // 数据库链接驱动类
+  private String url; // 数据库地址
+  private String username; // 数据库用户名
+  private String password; // 数据库密码
 
-  private Boolean autoCommit;
-  private Integer defaultTransactionIsolationLevel;
+  private Boolean autoCommit; // 是否自动提交
+  private Integer defaultTransactionIsolationLevel; // 默认隔离级别
 
   static {
     Enumeration<Driver> drivers = DriverManager.getDrivers();
     while (drivers.hasMoreElements()) {
       Driver driver = drivers.nextElement();
-      registeredDrivers.put(driver.getClass().getName(), driver);
+      registeredDrivers.put(driver.getClass().getName(), driver); // 添加jdbc驱动
     }
   }
 
@@ -197,24 +200,25 @@ public class UnpooledDataSource implements DataSource {
   }
 
   private Connection doGetConnection(Properties properties) throws SQLException {
-    initializeDriver();
-    Connection connection = DriverManager.getConnection(url, properties);
-    configureConnection(connection);
+    initializeDriver(); // 初始化驱动
+    Connection connection = DriverManager.getConnection(url, properties); // 创建连接
+    configureConnection(connection); // 配置数据库连接的autoCommit，和隔离级别
     return connection;
   }
 
   private synchronized void initializeDriver() throws SQLException {
-    if (!registeredDrivers.containsKey(driver)) {
+    if (!registeredDrivers.containsKey(driver)) { // 检查驱动是否已存在
       Class<?> driverType;
       try {
         if (driverClassLoader != null) {
-          driverType = Class.forName(driver, true, driverClassLoader);
+          driverType = Class.forName(driver, true, driverClassLoader); // 注册驱动
         } else {
           driverType = Resources.classForName(driver);
         }
         // DriverManager requires the driver to be loaded via the system ClassLoader.
         // http://www.kfu.com/~nsayer/Java/dyn-jdbc.html
-        Driver driverInstance = (Driver)driverType.newInstance();
+        Driver driverInstance = (Driver)driverType.newInstance(); // 创建driver对象
+        // 注册驱动
         DriverManager.registerDriver(new DriverProxy(driverInstance));
         registeredDrivers.put(driver, driverInstance);
       } catch (Exception e) {
@@ -224,10 +228,10 @@ public class UnpooledDataSource implements DataSource {
   }
 
   private void configureConnection(Connection conn) throws SQLException {
-    if (autoCommit != null && autoCommit != conn.getAutoCommit()) {
+    if (autoCommit != null && autoCommit != conn.getAutoCommit()) { // 设置自动提交
       conn.setAutoCommit(autoCommit);
     }
-    if (defaultTransactionIsolationLevel != null) {
+    if (defaultTransactionIsolationLevel != null) { // 设置事务隔离级别
       conn.setTransactionIsolation(defaultTransactionIsolationLevel);
     }
   }
