@@ -398,10 +398,10 @@ public class PooledDataSource implements DataSource {
               state.claimedOverdueConnectionCount++;
               state.accumulatedCheckoutTimeOfOverdueConnections += longestCheckoutTime;
               state.accumulatedCheckoutTime += longestCheckoutTime;
-              state.activeConnections.remove(oldestActiveConnection);
+              state.activeConnections.remove(oldestActiveConnection); //移除超时连接
               if (!oldestActiveConnection.getRealConnection().getAutoCommit()) {
                 try {
-                  oldestActiveConnection.getRealConnection().rollback();
+                  oldestActiveConnection.getRealConnection().rollback(); //超时连接未提交，则进行回滚
                 } catch (SQLException e) {
                   log.debug("Bad connection. Could not roll back");
                 }  
@@ -409,7 +409,7 @@ public class PooledDataSource implements DataSource {
               conn = new PooledConnection(oldestActiveConnection.getRealConnection(), this);
               conn.setCreatedTimestamp(oldestActiveConnection.getCreatedTimestamp());
               conn.setLastUsedTimestamp(oldestActiveConnection.getLastUsedTimestamp());
-              oldestActiveConnection.invalidate();
+              oldestActiveConnection.invalidate(); // 创建为新的PooledConnection对象，真实连接还是原来的，并将旧的PooledConnection设置为失效
               if (log.isDebugEnabled()) {
                 log.debug("Claimed overdue connection " + conn.getRealHashCode() + ".");
               }
@@ -425,7 +425,7 @@ public class PooledDataSource implements DataSource {
                   log.debug("Waiting as long as " + poolTimeToWait + " milliseconds for connection.");
                 }
                 long wt = System.currentTimeMillis();
-                state.wait(poolTimeToWait);
+                state.wait(poolTimeToWait); // 设置阻塞时间
                 state.accumulatedWaitTime += System.currentTimeMillis() - wt;
               } catch (InterruptedException e) {
                 break;
@@ -448,9 +448,10 @@ public class PooledDataSource implements DataSource {
             if (log.isDebugEnabled()) {
               log.debug("A bad connection (" + conn.getRealHashCode() + ") was returned from the pool, getting another connection.");
             }
-            state.badConnectionCount++;
+            state.badConnectionCount++; // 记录无效连接次数
             localBadConnectionCount++;
             conn = null;
+            // 如果无效连接次数超过阈值，则抛出异常
             if (localBadConnectionCount > (poolMaximumIdleConnections + 3)) {
               if (log.isDebugEnabled()) {
                 log.debug("PooledDataSource: Could not get a good connection to the database.");
