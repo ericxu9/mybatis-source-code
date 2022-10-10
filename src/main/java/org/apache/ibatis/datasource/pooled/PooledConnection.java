@@ -33,13 +33,13 @@ class PooledConnection implements InvocationHandler {
 
   private int hashCode = 0;
   private PooledDataSource dataSource;
-  private Connection realConnection;
-  private Connection proxyConnection;
-  private long checkoutTimestamp;
-  private long createdTimestamp;
-  private long lastUsedTimestamp;
-  private int connectionTypeCode;
-  private boolean valid;
+  private Connection realConnection; // 真正的数据库连接
+  private Connection proxyConnection; // 数据库连接代理对象
+  private long checkoutTimestamp; // 连接的时间戳
+  private long createdTimestamp; // 该连接创建时的时间戳
+  private long lastUsedTimestamp; // 该连接最后一次使用的时间戳
+  private int connectionTypeCode; // 由url+username+password 组合计算出的hash值，标识所在的连接池
+  private boolean valid; // 检查当前连接是否有效，防止close后继续使用它操作数据库
 
   /*
    * Constructor for SimplePooledConnection that uses the Connection and PooledDataSource passed in
@@ -232,15 +232,15 @@ class PooledConnection implements InvocationHandler {
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
     String methodName = method.getName();
-    if (CLOSE.hashCode() == methodName.hashCode() && CLOSE.equals(methodName)) {
+    if (CLOSE.hashCode() == methodName.hashCode() && CLOSE.equals(methodName)) { // 如果调用close方法，则将其重新放入连接池，而不是真正关闭数据库连接
       dataSource.pushConnection(this);
       return null;
     } else {
       try {
-        if (!Object.class.equals(method.getDeclaringClass())) {
+        if (!Object.class.equals(method.getDeclaringClass())) { // 过滤掉Object类的toString等方法
           // issue #579 toString() should never fail
           // throw an SQLException instead of a Runtime
-          checkConnection();
+          checkConnection(); //通过valid判断连接是否有效
         }
         return method.invoke(realConnection, args);
       } catch (Throwable t) {

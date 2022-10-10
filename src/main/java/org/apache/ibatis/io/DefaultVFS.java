@@ -69,7 +69,7 @@ public class DefaultVFS extends VFS {
       else {
         List<String> children = new ArrayList<String>();
         try {
-          if (isJar(url)) {
+          if (isJar(url)) { // 判断该url资源是否是jar包，获取jar包中所有资源
             // Some versions of JBoss VFS might give a JAR stream even if the resource
             // referenced by the URL isn't actually a JAR
             is = url.openStream();

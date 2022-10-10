@@ -32,6 +32,7 @@ public class UnpooledDataSourceFactory implements DataSourceFactory {
   private static final String DRIVER_PROPERTY_PREFIX = "driver.";
   private static final int DRIVER_PROPERTY_PREFIX_LENGTH = DRIVER_PROPERTY_PREFIX.length();
 
+  // UnpooledDataSource
   protected DataSource dataSource;
 
   public UnpooledDataSourceFactory() {
@@ -41,21 +42,23 @@ public class UnpooledDataSourceFactory implements DataSourceFactory {
   @Override
   public void setProperties(Properties properties) {
     Properties driverProperties = new Properties();
+    // 创建DataSource相应的MetaObject
     MetaObject metaDataSource = SystemMetaObject.forObject(dataSource);
-    for (Object key : properties.keySet()) {
+    for (Object key : properties.keySet()) { // 遍历属性
       String propertyName = (String) key;
-      if (propertyName.startsWith(DRIVER_PROPERTY_PREFIX)) {
+      if (propertyName.startsWith(DRIVER_PROPERTY_PREFIX)) { // 如果是driver.开头的，则保存起来
         String value = properties.getProperty(propertyName);
         driverProperties.setProperty(propertyName.substring(DRIVER_PROPERTY_PREFIX_LENGTH), value);
-      } else if (metaDataSource.hasSetter(propertyName)) {
+      } else if (metaDataSource.hasSetter(propertyName)) { // 是否有该属性的 set方法
         String value = (String) properties.get(propertyName);
+        // 进行类型转换，Integer，Long，Boolean这三种
         Object convertedValue = convertValue(metaDataSource, propertyName, value);
         metaDataSource.setValue(propertyName, convertedValue);
       } else {
         throw new DataSourceException("Unknown DataSource property: " + propertyName);
       }
     }
-    if (driverProperties.size() > 0) {
+    if (driverProperties.size() > 0) { // 设置 dataSource 的 driverProperties属性值
       metaDataSource.setValue("driverProperties", driverProperties);
     }
   }
