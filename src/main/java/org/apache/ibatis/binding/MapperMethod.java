@@ -74,7 +74,7 @@ public class MapperMethod {
         break;
       }
       case SELECT:
-        if (method.returnsVoid() && method.hasResultHandler()) { // 方法返回值是void，方法参数有 ResultHandler，
+        if (method.returnsVoid() && method.hasResultHandler()) { // 方法返回值是void，方法参数有 ResultHandler，说明使用 ResultHandler来处理查询结果集
           executeWithResultHandler(sqlSession, args);
           result = null;
         } else if (method.returnsMany()) { // 方法返回值是 Collection 或者 Array
@@ -84,6 +84,7 @@ public class MapperMethod {
         } else if (method.returnsCursor()) { // 方法返回值是 Cursor
           result = executeForCursor(sqlSession, args);
         } else {
+          // 处理返回单一对象
           Object param = method.convertArgsToSqlCommandParam(args);
           result = sqlSession.selectOne(command.getName(), param);
         }
@@ -117,16 +118,20 @@ public class MapperMethod {
     return result;
   }
 
+  // 使用 ResultHandler 处理查询结果集
   private void executeWithResultHandler(SqlSession sqlSession, Object[] args) {
+    // 获取 SQL 语句对应的对象，里面记录了 SQL 语句相关信息
     MappedStatement ms = sqlSession.getConfiguration().getMappedStatement(command.getName());
+    // 当使用 ResultHandler处理结果集时，必须要指定 ResultMap 或 ResultType
     if (void.class.equals(ms.getResultMaps().get(0).getType())) {
       throw new BindingException("method " + command.getName() 
           + " needs either a @ResultMap annotation, a @ResultType annotation," 
           + " or a resultType attribute in XML so a ResultHandler can be used as a parameter.");
     }
-    Object param = method.convertArgsToSqlCommandParam(args);
-    if (method.hasRowBounds()) {
-      RowBounds rowBounds = method.extractRowBounds(args);
+    Object param = method.convertArgsToSqlCommandParam(args); // 转换实际参数
+    if (method.hasRowBounds()) { // 校验方法参数列表是否有 RowBounds 类型的参数
+      RowBounds rowBounds = method.extractRowBounds(args); // 通过 MethodSignature 中提前处理好的 rowBoundsIndex，从arg[] 中查找到对象
+      // 执行查询，并指定有 ResultHandler 处理结果对象
       sqlSession.select(command.getName(), param, rowBounds, method.extractResultHandler(args));
     } else {
       sqlSession.select(command.getName(), param, method.extractResultHandler(args));
@@ -137,12 +142,14 @@ public class MapperMethod {
     List<E> result;
     Object param = method.convertArgsToSqlCommandParam(args); // 获取参数名和传入实参对应关系
     if (method.hasRowBounds()) { // 方法参数上有 RowBounds 类
-      RowBounds rowBounds = method.extractRowBounds(args); //
+      RowBounds rowBounds = method.extractRowBounds(args);
+      // SqlSession 进行查询
       result = sqlSession.<E>selectList(command.getName(), param, rowBounds);
     } else {
       result = sqlSession.<E>selectList(command.getName(), param);
     }
     // issue #510 Collections & arrays support
+    // 将结果集转换为数组或Collection集合
     if (!method.getReturnType().isAssignableFrom(result.getClass())) {
       if (method.getReturnType().isArray()) {
         return convertToArray(result);
@@ -166,29 +173,32 @@ public class MapperMethod {
   }
 
   private <E> Object convertToDeclaredCollection(Configuration config, List<E> list) {
+    // 通过 ObjectFactory ，反射创建集合对象
     Object collection = config.getObjectFactory().create(method.getReturnType());
+    // 创建 MetaObject对象
     MetaObject metaObject = config.newMetaObject(collection);
-    metaObject.addAll(list);
+    metaObject.addAll(list); // 最终会调用Collection.addAll 方法
     return collection;
   }
 
   @SuppressWarnings("unchecked")
   private <E> Object convertToArray(List<E> list) {
+    // 获取数组元素的类型
     Class<?> arrayComponentType = method.getReturnType().getComponentType();
     Object array = Array.newInstance(arrayComponentType, list.size());
-    if (arrayComponentType.isPrimitive()) {
+    if (arrayComponentType.isPrimitive()) { // 判断元素类型是否是基本类型，如 int，long，boolean等
       for (int i = 0; i < list.size(); i++) {
         Array.set(array, i, list.get(i));
       }
       return array;
-    } else {
+    } else { // 包装类型
       return list.toArray((E[])array);
     }
   }
 
   private <K, V> Map<K, V> executeForMap(SqlSession sqlSession, Object[] args) {
     Map<K, V> result;
-    Object param = method.convertArgsToSqlCommandParam(args);
+    Object param = method.convertArgsToSqlCommandParam(args); // 转换实参列表
     if (method.hasRowBounds()) {
       RowBounds rowBounds = method.extractRowBounds(args);
       result = sqlSession.<K, V>selectMap(command.getName(), param, method.getMapKey(), rowBounds);
