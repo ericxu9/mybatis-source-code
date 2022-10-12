@@ -24,13 +24,15 @@ import org.apache.ibatis.cache.Cache;
 /**
  * FIFO (first in, first out) cache decorator
  *
+ * 先入先出 缓存装饰器
+ *
  * @author Clinton Begin
  */
 public class FifoCache implements Cache {
 
   private final Cache delegate;
-  private Deque<Object> keyList;
-  private int size;
+  private Deque<Object> keyList; // LinkedList
+  private int size; // 缓存上线，超过会清理最老的缓存
 
   public FifoCache(Cache delegate) {
     this.delegate = delegate;
@@ -80,8 +82,8 @@ public class FifoCache implements Cache {
   }
 
   private void cycleKeyList(Object key) {
-    keyList.addLast(key);
-    if (keyList.size() > size) {
+    keyList.addLast(key); // 添加新的key到链表尾
+    if (keyList.size() > size) { // 如果超出上线，则进行链表头移除
       Object oldestKey = keyList.removeFirst();
       delegate.removeObject(oldestKey);
     }

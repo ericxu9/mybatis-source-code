@@ -39,6 +39,7 @@ import java.util.concurrent.locks.ReadWriteLock;
  * @author Clinton Begin
  */
 
+// 定义缓存的基本行为
 public interface Cache {
 
   /**
@@ -59,6 +60,8 @@ public interface Cache {
   Object getObject(Object key);
 
   /**
+   * 删除 key 对应的数据
+   *
    * As of 3.3.0 this method is only called during a rollback 
    * for any previous value that was missing in the cache.
    * This lets any blocking cache to release the lock that 
@@ -75,20 +78,22 @@ public interface Cache {
   Object removeObject(Object key);
 
   /**
-   * Clears this cache instance
+   * 清空缓存
    */  
   void clear();
 
   /**
-   * Optional. This method is not called by the core.
-   * 
+   * 缓存项个数
+   * 可选的，这个方法不会被 MyBatis核心代码使用
+   *
    * @return The number of elements stored in the cache (not its capacity).
    */
   int getSize();
   
-  /** 
-   * Optional. As of 3.2.6 this method is no longer called by the core.
-   *  
+  /**
+   * 获取读写锁
+   * 可选的，从3.2.6版本开始此方法不会被 MyBatis 核心代码使用
+   *
    * Any locking needed by the cache must be provided internally by the cache provider.
    * 
    * @return A ReadWriteLock 
