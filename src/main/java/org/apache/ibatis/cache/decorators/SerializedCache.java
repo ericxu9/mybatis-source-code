@@ -30,6 +30,7 @@ import org.apache.ibatis.cache.CacheException;
 import org.apache.ibatis.io.Resources;
 
 /**
+ * 序列化缓存装饰器，put和get方法都是将对象序列化，所以取出的是一个全新的对象
  * @author Clinton Begin
  */
 public class SerializedCache implements Cache {

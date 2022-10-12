@@ -20,13 +20,14 @@ import java.util.concurrent.locks.ReadWriteLock;
 import org.apache.ibatis.cache.Cache;
 
 /**
+ * 周期性清理缓存的装饰器
  * @author Clinton Begin
  */
 public class ScheduledCache implements Cache {
 
   private Cache delegate;
-  protected long clearInterval;
-  protected long lastClear;
+  protected long clearInterval; // 记录了两次缓存清理之前的时间间隔，1个小时
+  protected long lastClear; // 最后一次清理时间
 
   public ScheduledCache(Cache delegate) {
     this.delegate = delegate;

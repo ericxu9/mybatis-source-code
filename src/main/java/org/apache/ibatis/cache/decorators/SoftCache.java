@@ -65,24 +65,24 @@ public class SoftCache implements Cache {
 
   @Override
   public void putObject(Object key, Object value) {
-    removeGarbageCollectedItems();
-    delegate.putObject(key, new SoftEntry(key, value, queueOfGarbageCollectedEntries));
+    removeGarbageCollectedItems(); // 清楚已经被 GC 回收的缓存数据
+    delegate.putObject(key, new SoftEntry(key, value, queueOfGarbageCollectedEntries)); // 添加缓存项
   }
 
   @Override
   public Object getObject(Object key) {
     Object result = null;
     @SuppressWarnings("unchecked") // assumed delegate cache is totally managed by this cache
-    SoftReference<Object> softReference = (SoftReference<Object>) delegate.getObject(key);
+    SoftReference<Object> softReference = (SoftReference<Object>) delegate.getObject(key); // 查找缓存项
     if (softReference != null) {
-      result = softReference.get();
-      if (result == null) {
-        delegate.removeObject(key);
+      result = softReference.get(); // 获取引用的真实的Value
+      if (result == null) { // 为null，说明已经被GC回收了
+        delegate.removeObject(key); // 清除对应的缓存项
       } else {
         // See #586 (and #335) modifications need more than a read lock 
         synchronized (hardLinksToAvoidGarbageCollection) {
-          hardLinksToAvoidGarbageCollection.addFirst(result);
-          if (hardLinksToAvoidGarbageCollection.size() > numberOfHardLinks) {
+          hardLinksToAvoidGarbageCollection.addFirst(result); // 缓存项的 Value 添加到 LinkedList 头中保存起来
+          if (hardLinksToAvoidGarbageCollection.size() > numberOfHardLinks) { // 超过 256，则从集合中尾部清除，类似于先进先出队列
             hardLinksToAvoidGarbageCollection.removeLast();
           }
         }
@@ -113,8 +113,8 @@ public class SoftCache implements Cache {
 
   private void removeGarbageCollectedItems() {
     SoftEntry sv;
-    while ((sv = (SoftEntry) queueOfGarbageCollectedEntries.poll()) != null) {
-      delegate.removeObject(sv.key);
+    while ((sv = (SoftEntry) queueOfGarbageCollectedEntries.poll()) != null) { // 遍历 ReferenceQueue 集合
+      delegate.removeObject(sv.key); // 对象已经被回收，删除缓存项
     }
   }
 
