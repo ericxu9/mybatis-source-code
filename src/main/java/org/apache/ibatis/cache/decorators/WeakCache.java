@@ -24,6 +24,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import org.apache.ibatis.cache.Cache;
 
 /**
+ * 和SoftCache基本一致，唯一不同就是使用的WeakReference
+ *
  * Weak Reference cache decorator.
  * Thanks to Dr. Heinz Kabutz for his guidance here.
  * 

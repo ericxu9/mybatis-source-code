@@ -22,14 +22,15 @@ import org.apache.ibatis.logging.Log;
 import org.apache.ibatis.logging.LogFactory;
 
 /**
+ * 提供了日志功能
  * @author Clinton Begin
  */
 public class LoggingCache implements Cache {
 
   private Log log;  
   private Cache delegate;
-  protected int requests = 0;
-  protected int hits = 0;
+  protected int requests = 0; // 记录访问次数
+  protected int hits = 0; // 记录命中次数
 
   public LoggingCache(Cache delegate) {
     this.delegate = delegate;
@@ -53,9 +54,9 @@ public class LoggingCache implements Cache {
 
   @Override
   public Object getObject(Object key) {
-    requests++;
+    requests++; // 访问次数+1
     final Object value = delegate.getObject(key);
-    if (value != null) {
+    if (value != null) { // 不为空，命中数+1
       hits++;
     }
     if (log.isDebugEnabled()) {

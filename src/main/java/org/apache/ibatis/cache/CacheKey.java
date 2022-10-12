@@ -32,11 +32,11 @@ public class CacheKey implements Cloneable, Serializable {
   private static final int DEFAULT_MULTIPLYER = 37;
   private static final int DEFAULT_HASHCODE = 17;
 
-  private int multiplier;
-  private int hashcode;
-  private long checksum;
-  private int count;
-  private List<Object> updateList;
+  private int multiplier; //参与计算hashcode，默认值 37
+  private int hashcode; // 当前对象的hashcode，默认是 17
+  private long checksum; // 校验和
+  private int count; // updateList 中数量
+  private List<Object> updateList; // 由该集合中所有的对象共同决定两个CacheKey是否相同
 
   public CacheKey() {
     this.hashcode = DEFAULT_HASHCODE;
@@ -54,11 +54,12 @@ public class CacheKey implements Cloneable, Serializable {
     return updateList.size();
   }
 
+  // 向 updateList中添加对象
   public void update(Object object) {
-    if (object != null && object.getClass().isArray()) {
-      int length = Array.getLength(object);
+    if (object != null && object.getClass().isArray()) { // object 是 数组类型
+      int length = Array.getLength(object); // 获取数组长度
       for (int i = 0; i < length; i++) {
-        Object element = Array.get(object, i);
+        Object element = Array.get(object, i); // 获取每一个元素
         doUpdate(element);
       }
     } else {
@@ -67,15 +68,16 @@ public class CacheKey implements Cloneable, Serializable {
   }
 
   private void doUpdate(Object object) {
-    int baseHashCode = object == null ? 1 : object.hashCode();
+    int baseHashCode = object == null ? 1 : object.hashCode(); // 获取 object hashCode
 
+    // 重新计算hashcode
     count++;
     checksum += baseHashCode;
     baseHashCode *= count;
 
     hashcode = multiplier * hashcode + baseHashCode;
 
-    updateList.add(object);
+    updateList.add(object); // 添加到list中
   }
 
   public void updateAll(Object[] objects) {
@@ -84,28 +86,29 @@ public class CacheKey implements Cloneable, Serializable {
     }
   }
 
+  // 比较两个CacheKey是否相等
   @Override
   public boolean equals(Object object) {
-    if (this == object) {
+    if (this == object) { // 是否是同一对象
       return true;
     }
-    if (!(object instanceof CacheKey)) {
+    if (!(object instanceof CacheKey)) { // 是否类型相同
       return false;
     }
 
     final CacheKey cacheKey = (CacheKey) object;
 
-    if (hashcode != cacheKey.hashcode) {
+    if (hashcode != cacheKey.hashcode) { // 比较hashcode
       return false;
     }
-    if (checksum != cacheKey.checksum) {
+    if (checksum != cacheKey.checksum) { // 比较校验和
       return false;
     }
-    if (count != cacheKey.count) {
+    if (count != cacheKey.count) { // 比较count
       return false;
     }
 
-    for (int i = 0; i < updateList.size(); i++) {
+    for (int i = 0; i < updateList.size(); i++) { // 比较集合中的每一项
       Object thisObject = updateList.get(i);
       Object thatObject = cacheKey.updateList.get(i);
       if (thisObject == null) {
