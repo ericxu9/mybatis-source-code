@@ -24,15 +24,20 @@ import java.util.concurrent.locks.ReadWriteLock;
 import org.apache.ibatis.cache.Cache;
 
 /**
+ * 软引用装饰器
  * Soft Reference cache decorator
  * Thanks to Dr. Heinz Kabutz for his guidance here.
  *
  * @author Clinton Begin
  */
 public class SoftCache implements Cache {
+  //hardLinksToAvoidGarbageCollection集合中实现的（即有强引用指向其value）
   private final Deque<Object> hardLinksToAvoidGarbageCollection;
+  // 引用队列，用于记录已经被GC回收的缓存项所对应的SoftEntry对象
   private final ReferenceQueue<Object> queueOfGarbageCollectedEntries;
+  //底层被装饰的底层Cache对象
   private final Cache delegate;
+  //强连接的个数，默认值是256
   private int numberOfHardLinks;
 
   public SoftCache(Cache delegate) {
@@ -117,8 +122,8 @@ public class SoftCache implements Cache {
     private final Object key;
 
     SoftEntry(Object key, Object value, ReferenceQueue<Object> garbageCollectionQueue) {
-      super(value, garbageCollectionQueue);
-      this.key = key;
+      super(value, garbageCollectionQueue); // 执行value为软引用，且关联了引用队列
+      this.key = key; // 强引用
     }
   }
 
