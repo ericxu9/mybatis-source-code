@@ -95,6 +95,7 @@ import org.apache.ibatis.type.TypeHandlerRegistry;
  */
 public class Configuration {
 
+  //transactionFactory、datasource、id
   protected Environment environment;
 
   protected boolean safeRowBoundsEnabled;
@@ -140,6 +141,7 @@ public class Configuration {
 
   // 存储mapper信息
   protected final MapperRegistry mapperRegistry = new MapperRegistry(this);
+  // 插件
   protected final InterceptorChain interceptorChain = new InterceptorChain();
   protected final TypeHandlerRegistry typeHandlerRegistry = new TypeHandlerRegistry();
   protected final TypeAliasRegistry typeAliasRegistry = new TypeAliasRegistry();

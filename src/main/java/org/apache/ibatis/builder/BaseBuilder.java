@@ -32,8 +32,11 @@ import org.apache.ibatis.type.TypeHandlerRegistry;
  * @author Clinton Begin
  */
 public abstract class BaseBuilder {
+  // 全局配置对象
   protected final Configuration configuration;
+  // mybatis配置文件中可以使用<typeAliases>标签自定义别名，都会记录在里面
   protected final TypeAliasRegistry typeAliasRegistry;
+  // 使用 <typeHandlers> 标签添加自定义类型转换，数据库类型与Java类型的转换，都会记录里面
   protected final TypeHandlerRegistry typeHandlerRegistry;
 
   public BaseBuilder(Configuration configuration) {
