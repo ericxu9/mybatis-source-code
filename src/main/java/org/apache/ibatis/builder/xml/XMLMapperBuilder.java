@@ -89,7 +89,7 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   public void parse() {
     if (!configuration.isResourceLoaded(resource)) { // 判断是否已经加载过了
-      configurationElement(parser.evalNode("/mapper"));
+      configurationElement(parser.evalNode("/mapper")); // 处理mapper节点
       configuration.addLoadedResource(resource);
       bindMapperForNamespace();
     }
@@ -105,16 +105,23 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   private void configurationElement(XNode context) {
     try {
-      String namespace = context.getStringAttribute("namespace");
-      if (namespace == null || namespace.equals("")) {
+      String namespace = context.getStringAttribute("namespace"); // 获取 namespace
+      if (namespace == null || namespace.equals("")) { // namespace不能为空
         throw new BuilderException("Mapper's namespace cannot be empty");
       }
+      // 记录当前命名空间
       builderAssistant.setCurrentNamespace(namespace);
+      // 解析<cache-ref>
       cacheRefElement(context.evalNode("cache-ref"));
+      // 解析 <cache>
       cacheElement(context.evalNode("cache"));
+      // 解析 <parameterMap> ，已被弃用
       parameterMapElement(context.evalNodes("/mapper/parameterMap"));
+      // 解析 <resultMap>
       resultMapElements(context.evalNodes("/mapper/resultMap"));
+      // 解析 <sql>
       sqlElement(context.evalNodes("/mapper/sql"));
+      // 解析 <select>、<insert>、<update>、<delete>
       buildStatementFromContext(context.evalNodes("select|insert|update|delete"));
     } catch (Exception e) {
       throw new BuilderException("Error parsing Mapper XML. Cause: " + e, e);
@@ -184,6 +191,7 @@ public class XMLMapperBuilder extends BaseBuilder {
     }
   }
 
+  // TODO
   private void cacheRefElement(XNode context) {
     if (context != null) {
       configuration.addCacheRef(builderAssistant.getCurrentNamespace(), context.getStringAttribute("namespace"));
@@ -196,17 +204,30 @@ public class XMLMapperBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * <cache> 节点
+   * @param context
+   * @throws Exception
+   */
   private void cacheElement(XNode context) throws Exception {
     if (context != null) {
+      // 获取type值，默认cache是 PerpetualCache.class
       String type = context.getStringAttribute("type", "PERPETUAL");
       Class<? extends Cache> typeClass = typeAliasRegistry.resolveAlias(type);
+      // 获取Cache接口的实现
       String eviction = context.getStringAttribute("eviction", "LRU");
       Class<? extends Cache> evictionClass = typeAliasRegistry.resolveAlias(eviction);
+      // flushInterval 属性，默认值null
       Long flushInterval = context.getLongAttribute("flushInterval");
+      // size 属性，默认值null
       Integer size = context.getIntAttribute("size");
+      // readOnly 默认值为false
       boolean readWrite = !context.getBooleanAttribute("readOnly", false);
+      // blocking,默认值为false
       boolean blocking = context.getBooleanAttribute("blocking", false);
+      // 获取 <cache> 下级的的 property
       Properties props = context.getChildrenAsProperties();
+      // 创建Cache对象，并添加到configuration中
       builderAssistant.useNewCache(typeClass, evictionClass, flushInterval, size, readWrite, blocking, props);
     }
   }

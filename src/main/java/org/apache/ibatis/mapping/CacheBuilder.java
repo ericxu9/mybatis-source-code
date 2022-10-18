@@ -38,13 +38,21 @@ import org.apache.ibatis.reflection.SystemMetaObject;
  * @author Clinton Begin
  */
 public class CacheBuilder {
+  // Cache对象唯一标识，一般对应映射文件中的 namespace
   private String id;
+  // Cache 接口的真正实现类，默认是PerpetualCache.class
   private Class<? extends Cache> implementation;
+  // Cache 装饰器，默认 LruCache.class
   private List<Class<? extends Cache>> decorators;
+  // Cache 大小
   private Integer size;
+  // 缓存清理时间周期
   private Long clearInterval;
+  // 是否可读写
   private boolean readWrite;
+  // 其它指定的配置信息 <cache>标签的指定的一个或多个 <property>
   private Properties properties;
+  // 是否阻塞
   private boolean blocking;
 
   public CacheBuilder(String id) {
@@ -90,17 +98,23 @@ public class CacheBuilder {
   }
 
   public Cache build() {
+    // 设置默认Cache实现类，和装饰器
     setDefaultImplementations();
+    // 创建 Cache对象
     Cache cache = newBaseCacheInstance(implementation, id);
+    // 初始化Cache对象，设置property中的内容到Cache对应的属性中
     setCacheProperties(cache);
     // issue #352, do not apply decorators to custom caches
+    // 检测cache对象类型，如果是 PerpetualCache ，则为其添加 decorators集中中的装饰器，如果是自定义类型的Cache接口实现，则不添加
     if (PerpetualCache.class.equals(cache.getClass())) {
       for (Class<? extends Cache> decorator : decorators) {
-        cache = newCacheDecoratorInstance(decorator, cache);
-        setCacheProperties(cache);
+        cache = newCacheDecoratorInstance(decorator, cache); // 创建装饰器
+        setCacheProperties(cache); // 配置装饰器属性
       }
+      // 添加mybatis中提供的标准装饰器
       cache = setStandardDecorators(cache);
     } else if (!LoggingCache.class.isAssignableFrom(cache.getClass())) {
+      // 如果不是 LoggingCache 的子类，则添加 LoggingCache
       cache = new LoggingCache(cache);
     }
     return cache;
@@ -121,16 +135,17 @@ public class CacheBuilder {
       if (size != null && metaCache.hasSetter("size")) {
         metaCache.setValue("size", size);
       }
-      if (clearInterval != null) {
+      if (clearInterval != null) { // 指定了 clearInterval 字段的话，需要创建 ScheduledCache 装饰器
         cache = new ScheduledCache(cache);
         ((ScheduledCache) cache).setClearInterval(clearInterval);
       }
-      if (readWrite) {
+      if (readWrite) { // 指定了 readWrite 是否只读，添加SerializedCache装饰器
         cache = new SerializedCache(cache);
       }
+      // 默认添加 LoggingCache、SynchronizedCache
       cache = new LoggingCache(cache);
       cache = new SynchronizedCache(cache);
-      if (blocking) {
+      if (blocking) { // 是否阻塞，添加 BlockingCache
         cache = new BlockingCache(cache);
       }
       return cache;
@@ -145,9 +160,9 @@ public class CacheBuilder {
       for (Map.Entry<Object, Object> entry : properties.entrySet()) {
         String name = (String) entry.getKey();
         String value = (String) entry.getValue();
-        if (metaCache.hasSetter(name)) {
-          Class<?> type = metaCache.getSetterType(name);
-          if (String.class == type) {
+        if (metaCache.hasSetter(name)) { // 检测cache种是否有name对应的setter方法
+          Class<?> type = metaCache.getSetterType(name); // 获取该属性的类型
+          if (String.class == type) { // 下面开始判断，进行转换
             metaCache.setValue(name, value);
           } else if (int.class == type
               || Integer.class == type) {

@@ -148,6 +148,7 @@ public class Configuration {
   protected final LanguageDriverRegistry languageRegistry = new LanguageDriverRegistry();
 
   protected final Map<String, MappedStatement> mappedStatements = new StrictMap<MappedStatement>("Mapped Statements collection");
+  // 缓存
   protected final Map<String, Cache> caches = new StrictMap<Cache>("Caches collection");
   protected final Map<String, ResultMap> resultMaps = new StrictMap<ResultMap>("Result Maps collection");
   protected final Map<String, ParameterMap> parameterMaps = new StrictMap<ParameterMap>("Parameter Maps collection");
@@ -858,26 +859,27 @@ public class Configuration {
 
     @SuppressWarnings("unchecked")
     public V put(String key, V value) {
-      if (containsKey(key)) {
+      if (containsKey(key)) { // 有重复的key抛异常
         throw new IllegalArgumentException(name + " already contains value for " + key);
       }
       if (key.contains(".")) {
-        final String shortKey = getShortName(key);
+        final String shortKey = getShortName(key); // 如果包含. 则进行分割取数组最后一项
         if (super.get(shortKey) == null) {
-          super.put(shortKey, value);
+          super.put(shortKey, value); // 不包含直接put
         } else {
+          // 如果已经存在，则将 value修改成 Ambiguity
           super.put(shortKey, (V) new Ambiguity(shortKey));
         }
       }
-      return super.put(key, value);
+      return super.put(key, value); // 如果不包含该key，则添加该键值对
     }
 
     public V get(Object key) {
-      V value = super.get(key);
+      V value = super.get(key); // 未查询到value，异常
       if (value == null) {
         throw new IllegalArgumentException(name + " does not contain value for " + key);
       }
-      if (value instanceof Ambiguity) {
+      if (value instanceof Ambiguity) { // value是Ambiguity，说明直接put的时候覆盖掉了，namespace同名，抛异常
         throw new IllegalArgumentException(((Ambiguity) value).getSubject() + " is ambiguous in " + name
             + " (try using the full name including the namespace, or rename one of the entries)");
       }
