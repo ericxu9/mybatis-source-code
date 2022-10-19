@@ -158,6 +158,7 @@ public class Configuration {
   protected final Map<String, XNode> sqlFragments = new StrictMap<XNode>("XML fragments parsed from previous mappers");
 
   protected final Collection<XMLStatementBuilder> incompleteStatements = new LinkedList<XMLStatementBuilder>();
+  // 保存获取cache-ref中namespace在caches中解析异常的（也就是在 caches map里面没找到的）
   protected final Collection<CacheRefResolver> incompleteCacheRefs = new LinkedList<CacheRefResolver>();
   protected final Collection<ResultMapResolver> incompleteResultMaps = new LinkedList<ResultMapResolver>();
   protected final Collection<MethodResolver> incompleteMethods = new LinkedList<MethodResolver>();

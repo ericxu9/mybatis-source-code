@@ -191,14 +191,16 @@ public class XMLMapperBuilder extends BaseBuilder {
     }
   }
 
-  // TODO
   private void cacheRefElement(XNode context) {
     if (context != null) {
+      // 保存到 configuration 中的cacheRefMap，key为mapper的namespace，value为<cache-ref>的namespace
       configuration.addCacheRef(builderAssistant.getCurrentNamespace(), context.getStringAttribute("namespace"));
       CacheRefResolver cacheRefResolver = new CacheRefResolver(builderAssistant, context.getStringAttribute("namespace"));
       try {
+        // 开始解析CacheRef
         cacheRefResolver.resolveCacheRef();
       } catch (IncompleteElementException e) {
+        // 将解析异常的保存起来，稍后在解析
         configuration.addIncompleteCacheRef(cacheRefResolver);
       }
     }
@@ -259,6 +261,9 @@ public class XMLMapperBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 解析 <resultMap>
+   */
   private void resultMapElements(List<XNode> list) throws Exception {
     for (XNode resultMapNode : list) {
       try {

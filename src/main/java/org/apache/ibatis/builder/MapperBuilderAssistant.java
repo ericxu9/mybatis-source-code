@@ -54,6 +54,7 @@ import org.apache.ibatis.type.TypeHandler;
  */
 public class MapperBuilderAssistant extends BaseBuilder {
 
+  // mapper 的 namespace
   private String currentNamespace;
   private String resource;
   private Cache currentCache;
@@ -103,18 +104,23 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return currentNamespace + "." + base;
   }
 
+  /**
+   * 解析<cache-ref>中的namespace
+   * @param namespace
+   * @return
+   */
   public Cache useCacheRef(String namespace) {
-    if (namespace == null) {
+    if (namespace == null) { // namespace 不能为空
       throw new BuilderException("cache-ref element requires a namespace attribute.");
     }
     try {
-      unresolvedCacheRef = true;
-      Cache cache = configuration.getCache(namespace);
-      if (cache == null) {
+      unresolvedCacheRef = true; // 未成功解析 cache-ref
+      Cache cache = configuration.getCache(namespace); // 获取namespace的cache对象
+      if (cache == null) { // 如果找不到则抛出异常
         throw new IncompleteElementException("No cache for namespace '" + namespace + "' could be found.");
       }
-      currentCache = cache;
-      unresolvedCacheRef = false;
+      currentCache = cache; // 记录当前命名空间的cache
+      unresolvedCacheRef = false; // 标识成已成功解析cache-ref
       return cache;
     } catch (IllegalArgumentException e) {
       throw new IncompleteElementException("No cache for namespace '" + namespace + "' could be found.", e);
