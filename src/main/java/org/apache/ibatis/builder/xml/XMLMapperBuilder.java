@@ -262,7 +262,7 @@ public class XMLMapperBuilder extends BaseBuilder {
   }
 
   /**
-   * 解析 <resultMap>
+   * 遍历解析所有 <resultMap>
    */
   private void resultMapElements(List<XNode> list) throws Exception {
     for (XNode resultMapNode : list) {
@@ -280,34 +280,43 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   private ResultMap resultMapElement(XNode resultMapNode, List<ResultMapping> additionalResultMappings) throws Exception {
     ErrorContext.instance().activity("processing " + resultMapNode.getValueBasedIdentifier());
+    // 获取 resultMap id属性
     String id = resultMapNode.getStringAttribute("id",
         resultMapNode.getValueBasedIdentifier());
+    // type 属性
     String type = resultMapNode.getStringAttribute("type",
         resultMapNode.getStringAttribute("ofType",
             resultMapNode.getStringAttribute("resultType",
                 resultMapNode.getStringAttribute("javaType"))));
+    // extends 属性，继承的 resultMap 节点
     String extend = resultMapNode.getStringAttribute("extends");
+    // true:自动映射，自动查询列名相同的属性； false：要在resultMap中注明映射关系才行
     Boolean autoMapping = resultMapNode.getBooleanAttribute("autoMapping");
     Class<?> typeClass = resolveClass(type);
     Discriminator discriminator = null;
+    // 记录解析的结果
     List<ResultMapping> resultMappings = new ArrayList<ResultMapping>();
     resultMappings.addAll(additionalResultMappings);
+    // 获取 resultMap 下所有子节点
     List<XNode> resultChildren = resultMapNode.getChildren();
     for (XNode resultChild : resultChildren) {
-      if ("constructor".equals(resultChild.getName())) {
+      if ("constructor".equals(resultChild.getName())) { // 解析 <constructor>
         processConstructorElement(resultChild, typeClass, resultMappings);
-      } else if ("discriminator".equals(resultChild.getName())) {
+      } else if ("discriminator".equals(resultChild.getName())) { // 解析 <discriminator>
         discriminator = processDiscriminatorElement(resultChild, typeClass, resultMappings);
       } else {
+        // 处理 <id>、<result>、<collection>、<association>等节点
         List<ResultFlag> flags = new ArrayList<ResultFlag>();
         if ("id".equals(resultChild.getName())) {
           flags.add(ResultFlag.ID);
         }
+        // 创建ResultMapping对象，添加到集合中
         resultMappings.add(buildResultMappingFromContext(resultChild, typeClass, flags));
       }
     }
     ResultMapResolver resultMapResolver = new ResultMapResolver(builderAssistant, id, typeClass, extend, discriminator, resultMappings, autoMapping);
     try {
+      // 创建ResultMap对象，添加到configuration的resultMaps集合中，StrictMap类型
       return resultMapResolver.resolve();
     } catch (IncompleteElementException  e) {
       configuration.addIncompleteResultMap(resultMapResolver);

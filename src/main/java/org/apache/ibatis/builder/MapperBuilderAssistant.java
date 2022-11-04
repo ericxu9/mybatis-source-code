@@ -189,17 +189,22 @@ public class MapperBuilderAssistant extends BaseBuilder {
       Discriminator discriminator,
       List<ResultMapping> resultMappings,
       Boolean autoMapping) {
+    // 获取resultMap完整id，namespace.id 格式
     id = applyCurrentNamespace(id, false);
+    // 获取父级resultMap 完整 id
     extend = applyCurrentNamespace(extend, true);
 
+    // 如果有extend属性
     if (extend != null) {
-      if (!configuration.hasResultMap(extend)) {
+      if (!configuration.hasResultMap(extend)) { // configuration resultMaps集合中没有，则报错
         throw new IncompleteElementException("Could not find a parent resultmap with id '" + extend + "'");
       }
       ResultMap resultMap = configuration.getResultMap(extend);
+      // 获取父 resultMap 的 resultMappings
       List<ResultMapping> extendedResultMappings = new ArrayList<ResultMapping>(resultMap.getResultMappings());
-      extendedResultMappings.removeAll(resultMappings);
+      extendedResultMappings.removeAll(resultMappings); // 删除需要覆盖的
       // Remove parent constructor if this resultMap declares a constructor.
+      //
       boolean declaresConstructor = false;
       for (ResultMapping resultMapping : resultMappings) {
         if (resultMapping.getFlags().contains(ResultFlag.CONSTRUCTOR)) {
@@ -382,12 +387,16 @@ public class MapperBuilderAssistant extends BaseBuilder {
       String resultSet,
       String foreignColumn,
       boolean lazy) {
+    // 获取result 的 property 类型
     Class<?> javaTypeClass = resolveResultJavaType(resultType, property, javaType);
+    // 获取typeHandler
     TypeHandler<?> typeHandlerInstance = resolveTypeHandler(javaTypeClass, typeHandler);
+    // 解析 column 属性值，当column 是 {prop1=coll,prop2=col2}形式时，主要用于嵌套查询参数传递
     List<ResultMapping> composites = parseCompositeColumnName(column);
     if (composites.size() > 0) {
       column = null;
     }
+    // 创建 ResultMapping
     return new ResultMapping.Builder(configuration, property, column, javaTypeClass)
         .jdbcType(jdbcType)
         .nestedQueryId(applyCurrentNamespace(nestedSelect, true))

@@ -41,14 +41,23 @@ public class ResultMapping {
   private JdbcType jdbcType;
   // 节点的 typeHandler 属性值，它会覆盖默认的类型处理器
   private TypeHandler<?> typeHandler;
+  // 对应 association 节点的 resultMap 属性，通过id引用另外一个 <resultMap> ，可以进行一对多查询
   private String nestedResultMapId;
+  // 对应 association 节点的 select 属性，通过id引用另外一个 <select> 节点定义
   private String nestedQueryId;
+  // 对应 association 节点的 notNullColumns属性拆分后的结果
   private Set<String> notNullColumns;
+  // 对应 association 节点的 columnPrefix 属性
   private String columnPrefix;
+  // 处理后的标志，总共就这两个 ID, CONSTRUCTOR
   private List<ResultFlag> flags;
+  // 对应节点的 column 属性拆分后生成的的结果，composites.size > 0 ,会使column为null
   private List<ResultMapping> composites;
+  // 对应 association 节点的 resultSet 属性
   private String resultSet;
+  // 对应 association 节点的 foreignColumn 属性
   private String foreignColumn;
+  // 对应 association 节点的 fetchType 属性，是否延迟加载
   private boolean lazy;
 
   ResultMapping() {
