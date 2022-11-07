@@ -42,6 +42,7 @@ public class XMLIncludeTransformer {
   }
 
   public void applyIncludes(Node source) {
+    // 获取 mybatis-config.xml properties 中变量集合
     Properties variablesContext = new Properties();
     Properties configurationVariables = configuration.getVariables();
     if (configurationVariables != null) {
@@ -57,8 +58,10 @@ public class XMLIncludeTransformer {
    */
   private void applyIncludes(Node source, final Properties variablesContext, boolean included) {
     if (source.getNodeName().equals("include")) {
+      // 查询 refid指向的节点
       Node toInclude = findSqlFragment(getStringAttribute(source, "refid"), variablesContext);
       Properties toIncludeContext = getVariablesContext(source, variablesContext);
+      // 递归处理，<sql> 中可能还存在 include
       applyIncludes(toInclude, toIncludeContext, true);
       if (toInclude.getOwnerDocument() != source.getOwnerDocument()) {
         toInclude = source.getOwnerDocument().importNode(toInclude, true);
@@ -67,15 +70,16 @@ public class XMLIncludeTransformer {
       while (toInclude.hasChildNodes()) {
         toInclude.getParentNode().insertBefore(toInclude.getFirstChild(), toInclude);
       }
-      toInclude.getParentNode().removeChild(toInclude);
+      toInclude.getParentNode().removeChild(toInclude); // 删除 <sql> 节点
     } else if (source.getNodeType() == Node.ELEMENT_NODE) {
-      NodeList children = source.getChildNodes();
+      NodeList children = source.getChildNodes(); // 遍历sql语句的子节点
       for (int i = 0; i < children.getLength(); i++) {
         applyIncludes(children.item(i), variablesContext, included);
       }
     } else if (included && source.getNodeType() == Node.TEXT_NODE
         && !variablesContext.isEmpty()) {
       // replace variables ins all text nodes
+      // 替换占位符
       source.setNodeValue(PropertyParser.parse(source.getNodeValue(), variablesContext));
     }
   }
