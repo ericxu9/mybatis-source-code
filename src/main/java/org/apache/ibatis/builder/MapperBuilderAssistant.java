@@ -204,7 +204,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
       List<ResultMapping> extendedResultMappings = new ArrayList<ResultMapping>(resultMap.getResultMappings());
       extendedResultMappings.removeAll(resultMappings); // 删除需要覆盖的
       // Remove parent constructor if this resultMap declares a constructor.
-      //
+      // 如果当前 resultMap 映射声明了constructor 节点 ，则删除父级 constructor 节点。
       boolean declaresConstructor = false;
       for (ResultMapping resultMapping : resultMappings) {
         if (resultMapping.getFlags().contains(ResultFlag.CONSTRUCTOR)) {
@@ -222,6 +222,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
       }
       resultMappings.addAll(extendedResultMappings);
     }
+    // 构造 ResultMap，添加到 configuration resultMaps 中
     ResultMap resultMap = new ResultMap.Builder(configuration, id, type, resultMappings, autoMapping)
         .discriminator(discriminator)
         .build();

@@ -324,14 +324,18 @@ public class XMLMapperBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 解析 <constructor> 节点
+   */
   private void processConstructorElement(XNode resultChild, Class<?> resultType, List<ResultMapping> resultMappings) throws Exception {
     List<XNode> argChildren = resultChild.getChildren();
     for (XNode argChild : argChildren) {
       List<ResultFlag> flags = new ArrayList<ResultFlag>();
       flags.add(ResultFlag.CONSTRUCTOR);
-      if ("idArg".equals(argChild.getName())) {
+      if ("idArg".equals(argChild.getName())) { // 添加 ID 标志
         flags.add(ResultFlag.ID);
       }
+      // 创建 ResultMapping
       resultMappings.add(buildResultMappingFromContext(argChild, resultType, flags));
     }
   }
@@ -346,7 +350,7 @@ public class XMLMapperBuilder extends BaseBuilder {
     Class<? extends TypeHandler<?>> typeHandlerClass = (Class<? extends TypeHandler<?>>) resolveClass(typeHandler);
     JdbcType jdbcTypeEnum = resolveJdbcType(jdbcType);
     Map<String, String> discriminatorMap = new HashMap<String, String>();
-    for (XNode caseChild : context.getChildren()) {
+    for (XNode caseChild : context.getChildren()) { // 子节点 case
       String value = caseChild.getStringAttribute("value");
       String resultMap = caseChild.getStringAttribute("resultMap", processNestedResultMappings(caseChild, resultMappings));
       discriminatorMap.put(value, resultMap);
@@ -365,6 +369,7 @@ public class XMLMapperBuilder extends BaseBuilder {
     for (XNode context : list) {
       String databaseId = context.getStringAttribute("databaseId");
       String id = context.getStringAttribute("id");
+      // 生成命名空间
       id = builderAssistant.applyCurrentNamespace(id, false);
       if (databaseIdMatchesCurrent(id, databaseId, requiredDatabaseId)) {
         sqlFragments.put(id, context);
@@ -398,6 +403,7 @@ public class XMLMapperBuilder extends BaseBuilder {
     String javaType = context.getStringAttribute("javaType");
     String jdbcType = context.getStringAttribute("jdbcType");
     String nestedSelect = context.getStringAttribute("select");
+    // 如果未指定 association 节点的 resultMap 属性，则是匿名的嵌套映射
     String nestedResultMap = context.getStringAttribute("resultMap",
         processNestedResultMappings(context, Collections.<ResultMapping> emptyList()));
     String notNullColumn = context.getStringAttribute("notNullColumn");
@@ -414,9 +420,11 @@ public class XMLMapperBuilder extends BaseBuilder {
   }
   
   private String processNestedResultMappings(XNode context, List<ResultMapping> resultMappings) throws Exception {
+    // 嵌套-只处理 association、collection、case节点
     if ("association".equals(context.getName())
         || "collection".equals(context.getName())
         || "case".equals(context.getName())) {
+      // 指定了 select 属性，不执行里面逻辑
       if (context.getStringAttribute("select") == null) {
         ResultMap resultMap = resultMapElement(context, resultMappings);
         return resultMap.getId();
