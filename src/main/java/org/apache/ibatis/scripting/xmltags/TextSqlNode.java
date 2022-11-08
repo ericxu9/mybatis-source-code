@@ -39,7 +39,7 @@ public class TextSqlNode implements SqlNode {
   }
   
   public boolean isDynamic() {
-    DynamicCheckerTokenParser checker = new DynamicCheckerTokenParser();
+    DynamicCheckerTokenParser checker = new DynamicCheckerTokenParser(); // 实现了 TokenHandler
     GenericTokenParser parser = createParser(checker);
     parser.parse(text);
     return checker.isDynamic();
@@ -101,6 +101,7 @@ public class TextSqlNode implements SqlNode {
 
     @Override
     public String handleToken(String content) {
+      // ${} 解析出了值说明就是动态sql
       this.isDynamic = true;
       return null;
     }

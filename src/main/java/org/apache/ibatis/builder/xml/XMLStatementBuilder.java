@@ -118,12 +118,13 @@ public class XMLStatementBuilder extends BaseBuilder {
   }
 
   private void processSelectKeyNodes(String id, Class<?> parameterTypeClass, LanguageDriver langDriver) {
+    // 获取 <selectKey> 节点
     List<XNode> selectKeyNodes = context.evalNodes("selectKey");
     if (configuration.getDatabaseId() != null) {
       parseSelectKeyNodes(id, selectKeyNodes, parameterTypeClass, langDriver, configuration.getDatabaseId());
     }
     parseSelectKeyNodes(id, selectKeyNodes, parameterTypeClass, langDriver, null);
-    removeSelectKeyNodes(selectKeyNodes);
+    removeSelectKeyNodes(selectKeyNodes); // 移除 selectKey 节点
   }
 
   private void parseSelectKeyNodes(String parentId, List<XNode> list, Class<?> parameterTypeClass, LanguageDriver langDriver, String skRequiredDatabaseId) {
@@ -137,6 +138,7 @@ public class XMLStatementBuilder extends BaseBuilder {
   }
 
   private void parseSelectKeyNode(String id, XNode nodeToHandle, Class<?> parameterTypeClass, LanguageDriver langDriver, String databaseId) {
+    // 获取属性
     String resultType = nodeToHandle.getStringAttribute("resultType");
     Class<?> resultTypeClass = resolveClass(resultType);
     StatementType statementType = StatementType.valueOf(nodeToHandle.getStringAttribute("statementType", StatementType.PREPARED.toString()));
@@ -155,9 +157,12 @@ public class XMLStatementBuilder extends BaseBuilder {
     String resultMap = null;
     ResultSetType resultSetTypeEnum = null;
 
+    // 生成SqlSource
     SqlSource sqlSource = langDriver.createSqlSource(configuration, nodeToHandle, parameterTypeClass);
+    // selectKey 中 只能使用 select语句
     SqlCommandType sqlCommandType = SqlCommandType.SELECT;
 
+    // 创建MappedStatement 对象,添加到configuration中
     builderAssistant.addMappedStatement(id, sqlSource, statementType, sqlCommandType,
         fetchSize, timeout, parameterMap, parameterTypeClass, resultMap, resultTypeClass,
         resultSetTypeEnum, flushCache, useCache, resultOrdered,
@@ -166,6 +171,7 @@ public class XMLStatementBuilder extends BaseBuilder {
     id = builderAssistant.applyCurrentNamespace(id, false);
 
     MappedStatement keyStatement = configuration.getMappedStatement(id, false);
+    // 创建 selectKey 节点对应的 KeyGenerator
     configuration.addKeyGenerator(id, new SelectKeyGenerator(keyStatement, executeBefore));
   }
 

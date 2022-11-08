@@ -49,10 +49,11 @@ public class XMLScriptBuilder extends BaseBuilder {
   }
 
   public SqlSource parseScriptNode() {
+    // 当前节点是否有动态SQL
     List<SqlNode> contents = parseDynamicTags(context);
     MixedSqlNode rootSqlNode = new MixedSqlNode(contents);
     SqlSource sqlSource = null;
-    if (isDynamic) {
+    if (isDynamic) { // 是否是动态SQL，创建对应的SqlSource
       sqlSource = new DynamicSqlSource(configuration, rootSqlNode);
     } else {
       sqlSource = new RawSqlSource(configuration, rootSqlNode, parameterType);
@@ -65,21 +66,22 @@ public class XMLScriptBuilder extends BaseBuilder {
     NodeList children = node.getNode().getChildNodes();
     for (int i = 0; i < children.getLength(); i++) {
       XNode child = node.newXNode(children.item(i));
-      if (child.getNode().getNodeType() == Node.CDATA_SECTION_NODE || child.getNode().getNodeType() == Node.TEXT_NODE) {
+      if (child.getNode().getNodeType() == Node.CDATA_SECTION_NODE || child.getNode().getNodeType() == Node.TEXT_NODE) { // 文本节点处理
         String data = child.getStringBody("");
         TextSqlNode textSqlNode = new TextSqlNode(data);
-        if (textSqlNode.isDynamic()) {
+        if (textSqlNode.isDynamic()) { // 包含 ${} 为动态 SQL
           contents.add(textSqlNode);
           isDynamic = true;
         } else {
           contents.add(new StaticTextSqlNode(data));
         }
-      } else if (child.getNode().getNodeType() == Node.ELEMENT_NODE) { // issue #628
+      } else if (child.getNode().getNodeType() == Node.ELEMENT_NODE) { // issue #628 标签
         String nodeName = child.getNode().getNodeName();
-        NodeHandler handler = nodeHandlers(nodeName);
+        NodeHandler handler = nodeHandlers(nodeName); // where if 之类的
         if (handler == null) {
           throw new BuilderException("Unknown element <" + nodeName + "> in SQL statement.");
         }
+        // 将包装好的 SqlNode对象 添加到 contents 集合中
         handler.handleNode(child, contents);
         isDynamic = true;
       }
