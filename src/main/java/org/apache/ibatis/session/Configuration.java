@@ -156,6 +156,7 @@ public class Configuration {
   // insert update 的 <selectKey>
   protected final Map<String, KeyGenerator> keyGenerators = new StrictMap<KeyGenerator>("Key Generators collection");
 
+  // 保存mapper 的namespace
   protected final Set<String> loadedResources = new HashSet<String>();
   protected final Map<String, XNode> sqlFragments = new StrictMap<XNode>("XML fragments parsed from previous mappers");
 
@@ -163,6 +164,7 @@ public class Configuration {
   // 保存获取cache-ref中namespace在caches中解析异常的（也就是在 caches map里面没找到的）
   protected final Collection<CacheRefResolver> incompleteCacheRefs = new LinkedList<CacheRefResolver>();
   protected final Collection<ResultMapResolver> incompleteResultMaps = new LinkedList<ResultMapResolver>();
+  // 保存Mapper接口上注解解析未完成的，后续重新解析
   protected final Collection<MethodResolver> incompleteMethods = new LinkedList<MethodResolver>();
 
   /*

@@ -93,7 +93,7 @@ public class XMLMapperBuilder extends BaseBuilder {
       configuration.addLoadedResource(resource);
       bindMapperForNamespace();
     }
-
+    // 处理 incomplete* 集合，解析mapper映射文件时，是按照文件头到文件尾顺序解析的，有时候在解析一个节点时，会引用该节点之后的、还未解析的节点，这会导致解析失败，所有下面需要将未解析完成的
     parsePendingResultMaps();
     parsePendingChacheRefs();
     parsePendingStatements();
@@ -152,8 +152,8 @@ public class XMLMapperBuilder extends BaseBuilder {
       Iterator<ResultMapResolver> iter = incompleteResultMaps.iterator();
       while (iter.hasNext()) {
         try {
-          iter.next().resolve();
-          iter.remove();
+          iter.next().resolve(); // 重新解析ResultMap节点
+          iter.remove(); // 移除
         } catch (IncompleteElementException e) {
           // ResultMap is still missing a resource...
         }
@@ -434,11 +434,12 @@ public class XMLMapperBuilder extends BaseBuilder {
   }
 
   private void bindMapperForNamespace() {
+    // 获取 mapper文件的namespace
     String namespace = builderAssistant.getCurrentNamespace();
     if (namespace != null) {
       Class<?> boundType = null;
       try {
-        boundType = Resources.classForName(namespace);
+        boundType = Resources.classForName(namespace); // 获 mapper 的 type属性类
       } catch (ClassNotFoundException e) {
         //ignore, bound type is not required
       }

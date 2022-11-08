@@ -120,24 +120,26 @@ public class MapperAnnotationBuilder {
 
   public void parse() {
     String resource = type.toString();
-    if (!configuration.isResourceLoaded(resource)) {
+    if (!configuration.isResourceLoaded(resource)) { // 检测是否加载过了
+      // 解析mapper
       loadXmlResource();
       configuration.addLoadedResource(resource);
       assistant.setCurrentNamespace(type.getName());
-      parseCache();
-      parseCacheRef();
+      parseCache(); // 解析 @CacheNamespace 注解
+      parseCacheRef(); // 解析 @CacheNamespaceRef 注解
       Method[] methods = type.getMethods();
-      for (Method method : methods) {
+      for (Method method : methods) { // 遍历 Mapper接口中所有方法
         try {
           // issue #237
           if (!method.isBridge()) {
-            parseStatement(method);
+            parseStatement(method); // 解析方法上 @SelectKey @ResultMap 等注解，并创建 MappedStatement
           }
         } catch (IncompleteElementException e) {
           configuration.addIncompleteMethod(new MethodResolver(this, method));
         }
       }
     }
+    // 遍历上面catch块里面添加的方法，重新进行解析
     parsePendingMethods();
   }
 
