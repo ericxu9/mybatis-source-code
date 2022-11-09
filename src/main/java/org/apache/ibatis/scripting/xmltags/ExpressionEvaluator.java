@@ -29,7 +29,8 @@ import org.apache.ibatis.builder.BuilderException;
 public class ExpressionEvaluator {
 
   public boolean evaluateBoolean(String expression, Object parameterObject) {
-    Object value = OgnlCache.getValue(expression, parameterObject);
+    Object value = OgnlCache.getValue(expression, parameterObject); // 解析表达式
+    // 处理boolean类型和数字类型
     if (value instanceof Boolean) {
       return (Boolean) value;
     }

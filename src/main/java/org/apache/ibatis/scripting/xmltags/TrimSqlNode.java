@@ -32,6 +32,7 @@ public class TrimSqlNode implements SqlNode {
   private SqlNode contents;
   private String prefix;
   private String suffix;
+  // 删除指定前缀和后缀，比如insert中的逗号
   private List<String> prefixesToOverride;
   private List<String> suffixesToOverride;
   private Configuration configuration;
@@ -53,12 +54,13 @@ public class TrimSqlNode implements SqlNode {
   public boolean apply(DynamicContext context) {
     FilteredDynamicContext filteredDynamicContext = new FilteredDynamicContext(context);
     boolean result = contents.apply(filteredDynamicContext);
-    filteredDynamicContext.applyAll();
+    filteredDynamicContext.applyAll(); // 处理前缀和后缀
     return result;
   }
 
   private static List<String> parseOverrides(String overrides) {
     if (overrides != null) {
+      // 分隔符 |
       final StringTokenizer parser = new StringTokenizer(overrides, "|", false);
       final List<String> list = new ArrayList<String>(parser.countTokens());
       while (parser.hasMoreTokens()) {
@@ -70,7 +72,8 @@ public class TrimSqlNode implements SqlNode {
   }
 
   private class FilteredDynamicContext extends DynamicContext {
-    private DynamicContext delegate;
+    private DynamicContext delegate; // DynamicContext 对象
+    // 是否处理过了前后缀
     private boolean prefixApplied;
     private boolean suffixApplied;
     private StringBuilder sqlBuffer;
@@ -87,10 +90,10 @@ public class TrimSqlNode implements SqlNode {
       sqlBuffer = new StringBuilder(sqlBuffer.toString().trim());
       String trimmedUppercaseSql = sqlBuffer.toString().toUpperCase(Locale.ENGLISH);
       if (trimmedUppercaseSql.length() > 0) {
-        applyPrefix(sqlBuffer, trimmedUppercaseSql);
-        applySuffix(sqlBuffer, trimmedUppercaseSql);
+        applyPrefix(sqlBuffer, trimmedUppercaseSql); // 处理前缀
+        applySuffix(sqlBuffer, trimmedUppercaseSql); // 处理后缀
       }
-      delegate.appendSql(sqlBuffer.toString());
+      delegate.appendSql(sqlBuffer.toString()); // 保存处理结果
     }
 
     @Override
@@ -129,7 +132,7 @@ public class TrimSqlNode implements SqlNode {
             }
           }
         }
-        if (prefix != null) {
+        if (prefix != null) { // 添加prefix 前缀
           sql.insert(0, " ");
           sql.insert(0, prefix);
         }

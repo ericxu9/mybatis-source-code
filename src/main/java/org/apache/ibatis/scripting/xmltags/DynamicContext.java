@@ -39,10 +39,12 @@ public class DynamicContext {
   }
 
   private final ContextMap bindings;
+  // 在SqlNode解析动态SQL时，会将解析后的SQL语句片段添加到该属性中保存
   private final StringBuilder sqlBuilder = new StringBuilder();
   private int uniqueNumber = 0;
 
   public DynamicContext(Configuration configuration, Object parameterObject) {
+    // 对于非Map对象，会创建对应的MataObject对象
     if (parameterObject != null && !(parameterObject instanceof Map)) {
       MetaObject metaObject = configuration.newMetaObject(parameterObject);
       bindings = new ContextMap(metaObject);
@@ -61,11 +63,13 @@ public class DynamicContext {
     bindings.put(name, value);
   }
 
+  // 追加sql片段
   public void appendSql(String sql) {
     sqlBuilder.append(sql);
     sqlBuilder.append(" ");
   }
 
+  // 获取解析后的完成sql
   public String getSql() {
     return sqlBuilder.toString().trim();
   }
@@ -89,6 +93,7 @@ public class DynamicContext {
         return super.get(strKey);
       }
 
+      // 从 MetaObject 中查找对应的属性
       if (parameterMetaObject != null) {
         // issue #61 do not modify the context when reading
         return parameterMetaObject.getValue(strKey);

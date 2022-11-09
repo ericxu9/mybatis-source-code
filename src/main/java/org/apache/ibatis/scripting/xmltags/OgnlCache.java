@@ -32,6 +32,7 @@ import org.apache.ibatis.builder.BuilderException;
  */
 public final class OgnlCache {
 
+  // 缓存 OGNL 表达式
   private static final Map<String, Object> expressionCache = new ConcurrentHashMap<String, Object>();
 
   private OgnlCache() {
@@ -40,13 +41,16 @@ public final class OgnlCache {
 
   public static Object getValue(String expression, Object root) {
     try {
+      // 创建 OgnlContext对象
       Map<Object, OgnlClassResolver> context = Ognl.createDefaultContext(root, new OgnlClassResolver());
+      // 使用OGNL 执行表达式
       return Ognl.getValue(parseExpression(expression), context, root);
     } catch (OgnlException e) {
       throw new BuilderException("Error evaluating expression '" + expression + "'. Cause: " + e, e);
     }
   }
 
+  // 从 expressionCache 缓存中查询，没有则进行解析，并将结果保存到 expressionCache 中
   private static Object parseExpression(String expression) throws OgnlException {
     Object node = expressionCache.get(expression);
     if (node == null) {

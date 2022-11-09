@@ -19,5 +19,9 @@ package org.apache.ibatis.scripting.xmltags;
  * @author Clinton Begin
  */
 public interface SqlNode {
+  /**
+   * 解析 SqlNode 所记录的动态 SQL 节点，并调用 DynamicContext.appendSql() 方法将解析后的sql追加起来，当sql节点下所有 SqlNode完成解析后
+   * 通过 DynamicContext.getSql() 就可以获取到完整的sql
+   */
   boolean apply(DynamicContext context);
 }

@@ -27,9 +27,12 @@ import org.apache.ibatis.session.Configuration;
 public class ForEachSqlNode implements SqlNode {
   public static final String ITEM_PREFIX = "__frch_";
 
+  // loop 终止条件
   private ExpressionEvaluator evaluator;
+  // 迭代的集合表达式
   private String collectionExpression;
   private SqlNode contents;
+  // 属性
   private String open;
   private String close;
   private String separator;
@@ -151,6 +154,7 @@ public class ForEachSqlNode implements SqlNode {
 
     @Override
     public void appendSql(String sql) {
+      // 解析 #{}
       GenericTokenParser parser = new GenericTokenParser("#{", "}", new TokenHandler() {
         @Override
         public String handleToken(String content) {
@@ -175,8 +179,8 @@ public class ForEachSqlNode implements SqlNode {
 
   private class PrefixedContext extends DynamicContext {
     private DynamicContext delegate;
-    private String prefix;
-    private boolean prefixApplied;
+    private String prefix; // 前缀
+    private boolean prefixApplied; // 是否已处理
 
     public PrefixedContext(DynamicContext delegate, String prefix) {
       super(configuration, null);
@@ -202,10 +206,10 @@ public class ForEachSqlNode implements SqlNode {
     @Override
     public void appendSql(String sql) {
       if (!prefixApplied && sql != null && sql.trim().length() > 0) {
-        delegate.appendSql(prefix);
+        delegate.appendSql(prefix); // 追加前缀
         prefixApplied = true;
       }
-      delegate.appendSql(sql);
+      delegate.appendSql(sql); // 追加片段
     }
 
     @Override
