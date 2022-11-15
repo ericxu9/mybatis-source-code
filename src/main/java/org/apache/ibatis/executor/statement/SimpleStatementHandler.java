@@ -32,6 +32,7 @@ import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 
 /**
+ * impleStatementHandler继承了BaseStatementHandler抽象类。它底层使用java.sql.Statement对象来完成数据库的相关操作，所以SQL语句中不能存在占位符，相应的，SimpleStatementHandler.parameterize（）方法是空实现。
  * @author Clinton Begin
  */
 public class SimpleStatementHandler extends BaseStatementHandler {
@@ -42,17 +43,21 @@ public class SimpleStatementHandler extends BaseStatementHandler {
 
   @Override
   public int update(Statement statement) throws SQLException {
-    String sql = boundSql.getSql();
-    Object parameterObject = boundSql.getParameterObject();
+    String sql = boundSql.getSql(); // 获取sql语句
+    Object parameterObject = boundSql.getParameterObject(); //获取实参
+    // 获取配置的 KeyGenerator
     KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
     int rows;
     if (keyGenerator instanceof Jdbc3KeyGenerator) {
+      // 执行sql
       statement.execute(sql, Statement.RETURN_GENERATED_KEYS);
       rows = statement.getUpdateCount();
+      // 将数据库主键添加到 parameterObject中
       keyGenerator.processAfter(executor, mappedStatement, statement, parameterObject);
     } else if (keyGenerator instanceof SelectKeyGenerator) {
-      statement.execute(sql);
+      statement.execute(sql); // 执行sql语句
       rows = statement.getUpdateCount();
+      // 执行 selectKey 节点中配置的SQL语句获取数据库生成的主键，并添加到parameterObject中
       keyGenerator.processAfter(executor, mappedStatement, statement, parameterObject);
     } else {
       statement.execute(sql);
@@ -71,7 +76,7 @@ public class SimpleStatementHandler extends BaseStatementHandler {
   public <E> List<E> query(Statement statement, ResultHandler resultHandler) throws SQLException {
     String sql = boundSql.getSql();
     statement.execute(sql);
-    return resultSetHandler.<E>handleResultSets(statement);
+    return resultSetHandler.<E>handleResultSets(statement); // 映射结果集
   }
 
   @Override
@@ -84,6 +89,7 @@ public class SimpleStatementHandler extends BaseStatementHandler {
   @Override
   protected Statement instantiateStatement(Connection connection) throws SQLException {
     if (mappedStatement.getResultSetType() != null) {
+      // 设置结果是否可以滚动及其游标是否可以上下移动，设置结果集是否可更新
       return connection.createStatement(mappedStatement.getResultSetType().getValue(), ResultSet.CONCUR_READ_ONLY);
     } else {
       return connection.createStatement();

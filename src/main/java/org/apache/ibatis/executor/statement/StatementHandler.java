@@ -30,18 +30,23 @@ import org.apache.ibatis.session.ResultHandler;
  */
 public interface StatementHandler {
 
+  // 从连接中获取一个statement
   Statement prepare(Connection connection, Integer transactionTimeout)
       throws SQLException;
 
+  // 绑定statement执行时需要的实参
   void parameterize(Statement statement)
       throws SQLException;
 
+  // 批量执行 sql 语句
   void batch(Statement statement)
       throws SQLException;
 
+  // update/insert/delete 语句
   int update(Statement statement)
       throws SQLException;
 
+  // select 语句
   <E> List<E> query(Statement statement, ResultHandler resultHandler)
       throws SQLException;
 
@@ -50,6 +55,6 @@ public interface StatementHandler {
 
   BoundSql getBoundSql();
 
-  ParameterHandler getParameterHandler();
+  ParameterHandler getParameterHandler(); // 获取其中封装的 ParameterHandler
 
 }

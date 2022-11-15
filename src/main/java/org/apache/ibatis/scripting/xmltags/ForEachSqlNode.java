@@ -60,7 +60,7 @@ public class ForEachSqlNode implements SqlNode {
       return true;
     }
     boolean first = true;
-    applyOpen(context);
+    applyOpen(context); // open
     int i = 0;
     for (Object o : iterable) {
       DynamicContext oldContext = context;
@@ -89,7 +89,7 @@ public class ForEachSqlNode implements SqlNode {
       context = oldContext;
       i++;
     }
-    applyClose(context);
+    applyClose(context); // close
     return true;
   }
 
@@ -119,6 +119,7 @@ public class ForEachSqlNode implements SqlNode {
     }
   }
 
+  // 添加 __frch_ 前缀 和 i 后缀
   private static String itemizeItem(String item, int i) {
     return new StringBuilder(ITEM_PREFIX).append(item).append("_").append(i).toString();
   }

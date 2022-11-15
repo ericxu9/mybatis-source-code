@@ -40,13 +40,20 @@ import org.apache.ibatis.type.UnknownTypeHandler;
  */
 public class ResultSetWrapper {
 
+  // 封装的 ResultSet 对象
   private final ResultSet resultSet;
   private final TypeHandlerRegistry typeHandlerRegistry;
+  // ResultSet 每列列名
   private final List<String> columnNames = new ArrayList<String>();
+  // Result 每列对应的Java类型
   private final List<String> classNames = new ArrayList<String>();
+  // 每列jdbcType类型
   private final List<JdbcType> jdbcTypes = new ArrayList<JdbcType>();
+  // key列名，value TypeHandler集合
   private final Map<String, Map<Class<?>, TypeHandler<?>>> typeHandlerMap = new HashMap<String, Map<Class<?>, TypeHandler<?>>>();
+  // 被映射的列名，key是ResultMap对象id，value是该ResultMap对象映射列名集合
   private Map<String, List<String>> mappedColumnNamesMap = new HashMap<String, List<String>>();
+  // 未映射的列名，key是ResultMap对象id，value是该ResultMap对象未映射列名集合
   private Map<String, List<String>> unMappedColumnNamesMap = new HashMap<String, List<String>>();
 
   public ResultSetWrapper(ResultSet rs, Configuration configuration) throws SQLException {
@@ -55,7 +62,8 @@ public class ResultSetWrapper {
     this.resultSet = rs;
     final ResultSetMetaData metaData = rs.getMetaData();
     final int columnCount = metaData.getColumnCount();
-    for (int i = 1; i <= columnCount; i++) {
+    for (int i = 1; i <= columnCount; i++) { // 初始化列相关集合
+      // 获取列名或是通过AS关键字指定的别名
       columnNames.add(configuration.isUseColumnLabel() ? metaData.getColumnLabel(i) : metaData.getColumnName(i));
       jdbcTypes.add(JdbcType.forCode(metaData.getColumnType(i)));
       classNames.add(metaData.getColumnClassName(i));
@@ -155,8 +163,10 @@ public class ResultSetWrapper {
   }
 
   public List<String> getMappedColumnNames(ResultMap resultMap, String columnPrefix) throws SQLException {
+    //  key = ResultMap的id+列前缀组成
     List<String> mappedColumnNames = mappedColumnNamesMap.get(getMapKey(resultMap, columnPrefix));
     if (mappedColumnNames == null) {
+      // 未查找到，则加载进行存入
       loadMappedAndUnmappedColumnNames(resultMap, columnPrefix);
       mappedColumnNames = mappedColumnNamesMap.get(getMapKey(resultMap, columnPrefix));
     }

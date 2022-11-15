@@ -32,6 +32,8 @@ import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 
 /**
+ * 底层依赖于java.sql.PreparedStatement对象来完成数据库的相关操作。在SimpleStatementHandler.parameterize（）方法中，
+ * 会调用ParameterHandler.setParameters（）方法完成SQL语句的参数绑定
  * @author Clinton Begin
  */
 public class PreparedStatementHandler extends BaseStatementHandler {
@@ -73,15 +75,16 @@ public class PreparedStatementHandler extends BaseStatementHandler {
 
   @Override
   protected Statement instantiateStatement(Connection connection) throws SQLException {
-    String sql = boundSql.getSql();
+    String sql = boundSql.getSql(); // 获取待执行的sql
     if (mappedStatement.getKeyGenerator() instanceof Jdbc3KeyGenerator) {
       String[] keyColumnNames = mappedStatement.getKeyColumns();
       if (keyColumnNames == null) {
-        return connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
+        return connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS); // 返回数据库生成的主键
       } else {
         return connection.prepareStatement(sql, keyColumnNames);
       }
     } else if (mappedStatement.getResultSetType() != null) {
+      // 设置结果集是否可以滚动以及其游标是否可以上下移动，设置结果集是否可更新
       return connection.prepareStatement(sql, mappedStatement.getResultSetType().getValue(), ResultSet.CONCUR_READ_ONLY);
     } else {
       return connection.prepareStatement(sql);

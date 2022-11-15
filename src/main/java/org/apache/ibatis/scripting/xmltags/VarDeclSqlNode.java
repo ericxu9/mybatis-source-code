@@ -16,6 +16,7 @@
 package org.apache.ibatis.scripting.xmltags;
 
 /**
+ * bind 标签
  * @author Frank D. Martinez [mnesarco]
  */
 public class VarDeclSqlNode implements SqlNode {
@@ -30,7 +31,7 @@ public class VarDeclSqlNode implements SqlNode {
 
   @Override
   public boolean apply(DynamicContext context) {
-    final Object value = OgnlCache.getValue(expression, context.getBindings());
+    final Object value = OgnlCache.getValue(expression, context.getBindings()); // Ognl
     context.bind(name, value);
     return true;
   }

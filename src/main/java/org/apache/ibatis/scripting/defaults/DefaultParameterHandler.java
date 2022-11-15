@@ -40,8 +40,8 @@ public class DefaultParameterHandler implements ParameterHandler {
 
   private final TypeHandlerRegistry typeHandlerRegistry;
 
-  private final MappedStatement mappedStatement;
-  private final Object parameterObject;
+  private final MappedStatement mappedStatement; // SQL 节点相应配置信息
+  private final Object parameterObject; // 实参
   private BoundSql boundSql;
   private Configuration configuration;
 
@@ -61,29 +61,35 @@ public class DefaultParameterHandler implements ParameterHandler {
   @Override
   public void setParameters(PreparedStatement ps) {
     ErrorContext.instance().activity("setting parameters").object(mappedStatement.getParameterMap().getId());
+    // 取出 sql 中的参数映射列表
     List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
     if (parameterMappings != null) {
       for (int i = 0; i < parameterMappings.size(); i++) {
         ParameterMapping parameterMapping = parameterMappings.get(i);
-        if (parameterMapping.getMode() != ParameterMode.OUT) {
+        if (parameterMapping.getMode() != ParameterMode.OUT) { // 过滤掉存储过程中的输出参数
           Object value;
+          // 获取参数名称
           String propertyName = parameterMapping.getProperty();
+          // 获取对应的实参值
           if (boundSql.hasAdditionalParameter(propertyName)) { // issue #448 ask first for additional params
             value = boundSql.getAdditionalParameter(propertyName);
-          } else if (parameterObject == null) {
+          } else if (parameterObject == null) { // 实参为空
             value = null;
           } else if (typeHandlerRegistry.hasTypeHandler(parameterObject.getClass())) {
             value = parameterObject;
           } else {
+            // 获取对象中相应的属性值或查找map对象中的值
             MetaObject metaObject = configuration.newMetaObject(parameterObject);
             value = metaObject.getValue(propertyName);
           }
+          // 获取 ParameterMapping 中设置的TypeHandler对象
           TypeHandler typeHandler = parameterMapping.getTypeHandler();
           JdbcType jdbcType = parameterMapping.getJdbcType();
           if (value == null && jdbcType == null) {
             jdbcType = configuration.getJdbcTypeForNull();
           }
           try {
+            // 最终会调用到 PreparedStatement.set*() 相关方法
             typeHandler.setParameter(ps, i + 1, value, jdbcType);
           } catch (TypeException e) {
             throw new TypeException("Could not set parameters for mapping: " + parameterMapping + ". Cause: " + e, e);

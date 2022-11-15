@@ -60,7 +60,7 @@ public abstract class BaseStatementHandler implements StatementHandler {
     this.objectFactory = configuration.getObjectFactory();
 
     if (boundSql == null) { // issue #435, get the key before calculating the statement
-      generateKeys(parameterObject);
+      generateKeys(parameterObject); // 获取主键
       boundSql = mappedStatement.getBoundSql(parameterObject);
     }
 
@@ -98,6 +98,12 @@ public abstract class BaseStatementHandler implements StatementHandler {
     }
   }
 
+  /**
+   * 通过 jdbc Connection 创建 Statement
+   * @param connection
+   * @return
+   * @throws SQLException
+   */
   protected abstract Statement instantiateStatement(Connection connection) throws SQLException;
 
   protected void setStatementTimeout(Statement stmt, Integer transactionTimeout) throws SQLException {

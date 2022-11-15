@@ -48,6 +48,7 @@ public class Jdbc3KeyGenerator implements KeyGenerator {
   public void processBatch(MappedStatement ms, Statement stmt, Collection<Object> parameters) {
     ResultSet rs = null;
     try {
+      // 获取数据库自动生成的主键，如果没有生成，则返回结果为空
       rs = stmt.getGeneratedKeys();
       final Configuration configuration = ms.getConfiguration();
       final TypeHandlerRegistry typeHandlerRegistry = configuration.getTypeHandlerRegistry();
@@ -64,7 +65,7 @@ public class Jdbc3KeyGenerator implements KeyGenerator {
           if (typeHandlers == null) {
             typeHandlers = getTypeHandlers(typeHandlerRegistry, metaParam, keyProperties, rsmd);
           }
-          populateKeys(rs, metaParam, keyProperties, typeHandlers);
+          populateKeys(rs, metaParam, keyProperties, typeHandlers); // 将生成的主键设置到用户传入的参数对应位置
         }
       }
     } catch (Exception e) {
@@ -84,7 +85,7 @@ public class Jdbc3KeyGenerator implements KeyGenerator {
     Collection<Object> parameters = null;
     if (parameter instanceof Collection) {
       parameters = (Collection) parameter;
-    } else if (parameter instanceof Map) {
+    } else if (parameter instanceof Map) { // 参数为map类型
       Map parameterMap = (Map) parameter;
       if (parameterMap.containsKey("collection")) {
         parameters = (Collection) parameterMap.get("collection");

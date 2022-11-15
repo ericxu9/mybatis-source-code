@@ -33,8 +33,8 @@ import org.apache.ibatis.session.RowBounds;
 public class SelectKeyGenerator implements KeyGenerator {
   
   public static final String SELECT_KEY_SUFFIX = "!selectKey";
-  private boolean executeBefore;
-  private MappedStatement keyStatement;
+  private boolean executeBefore; // insert 之前还是之后执行
+  private MappedStatement keyStatement; // <selectKey> 节点定义的SQL语句所对应的 MappedStatement
 
   public SelectKeyGenerator(MappedStatement keyStatement, boolean executeBefore) {
     this.executeBefore = executeBefore;
@@ -58,9 +58,9 @@ public class SelectKeyGenerator implements KeyGenerator {
   private void processGeneratedKeys(Executor executor, MappedStatement ms, Object parameter) {
     try {
       if (parameter != null && keyStatement != null && keyStatement.getKeyProperties() != null) {
-        String[] keyProperties = keyStatement.getKeyProperties();
+        String[] keyProperties = keyStatement.getKeyProperties(); // 获取selectKey 的keyProperties属性
         final Configuration configuration = ms.getConfiguration();
-        final MetaObject metaParam = configuration.newMetaObject(parameter);
+        final MetaObject metaParam = configuration.newMetaObject(parameter); // 传入的实参创建对应的MetaObject对象
         if (keyProperties != null) {
           // Do not close keyExecutor.
           // The transaction will be closed by parent executor.

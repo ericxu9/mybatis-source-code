@@ -35,11 +35,11 @@ import org.apache.ibatis.session.Configuration;
  */
 public class BoundSql {
 
-  private String sql;
-  private List<ParameterMapping> parameterMappings;
-  private Object parameterObject;
-  private Map<String, Object> additionalParameters;
-  private MetaObject metaParameters;
+  private String sql; // SQL 语句，可能存在 ? 占位符
+  private List<ParameterMapping> parameterMappings; // sql 参数属性集合
+  private Object parameterObject; // 实际参数
+  private Map<String, Object> additionalParameters; // 之后会复制 DynamicContext.bindings 集合中的内容
+  private MetaObject metaParameters; // additionalParameters 对应的 MetaObject对象
 
   public BoundSql(Configuration configuration, String sql, List<ParameterMapping> parameterMappings, Object parameterObject) {
     this.sql = sql;

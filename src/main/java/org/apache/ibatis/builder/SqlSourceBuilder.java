@@ -39,6 +39,13 @@ public class SqlSourceBuilder extends BaseBuilder {
     super(configuration);
   }
 
+  /**
+   *
+   * @param originalSql SqlNode.apply 处理后的SQL语句
+   * @param parameterType 用户传入的实参类型
+   * @param additionalParameters 形参和实参的对应关系，就是SqlNode apply 之后的DynamicContext.binding集合
+   * @return
+   */
   public SqlSource parse(String originalSql, Class<?> parameterType, Map<String, Object> additionalParameters) {
     ParameterMappingTokenHandler handler = new ParameterMappingTokenHandler(configuration, parameterType, additionalParameters);
     GenericTokenParser parser = new GenericTokenParser("#{", "}", handler);
@@ -64,10 +71,12 @@ public class SqlSourceBuilder extends BaseBuilder {
 
     @Override
     public String handleToken(String content) {
+      // 添加参数到集合里面
       parameterMappings.add(buildParameterMapping(content));
-      return "?";
+      return "?"; // 替换为 ? 占位符
     }
 
+    // 例如 #{__frc_item_0, javaType=int, jdbcType=NUMERIC, typeHandler=MyTypeHandler}
     private ParameterMapping buildParameterMapping(String content) {
       Map<String, String> propertiesMap = parseParameterMapping(content);
       String property = propertiesMap.get("property");
