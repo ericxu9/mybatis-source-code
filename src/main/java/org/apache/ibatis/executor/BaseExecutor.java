@@ -117,6 +117,7 @@ public abstract class BaseExecutor implements Executor {
     if (closed) {
       throw new ExecutorException("Executor was closed.");
     }
+    // 清空一级缓存
     clearLocalCache();
     return doUpdate(ms, parameter);
   }
@@ -126,16 +127,21 @@ public abstract class BaseExecutor implements Executor {
     return flushStatements(false);
   }
 
+  /**
+   * 批处理多条SQL
+   */
   public List<BatchResult> flushStatements(boolean isRollBack) throws SQLException {
     if (closed) {
       throw new ExecutorException("Executor was closed.");
     }
+    // isRollBack 是否执行Executor中缓存的 SQL语句，false表示执行，true表示不执行
     return doFlushStatements(isRollBack);
   }
 
   @Override
   public <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler) throws SQLException {
     BoundSql boundSql = ms.getBoundSql(parameter);
+    // 创建一级缓存 CacheKey
     CacheKey key = createCacheKey(ms, parameter, rowBounds, boundSql);
     return query(ms, parameter, rowBounds, resultHandler, key, boundSql);
  }
@@ -147,27 +153,33 @@ public abstract class BaseExecutor implements Executor {
     if (closed) {
       throw new ExecutorException("Executor was closed.");
     }
+    // 清空一级缓存：非嵌套查询，并且在select节点配置了flushCache属性为true
     if (queryStack == 0 && ms.isFlushCacheRequired()) {
       clearLocalCache();
     }
     List<E> list;
     try {
       queryStack++;
+      // 查询一级缓存
       list = resultHandler == null ? (List<E>) localCache.getObject(key) : null;
       if (list != null) {
+        // 处理存储过程调用，缓存命中后将保存的输出类型参数，并设置到用户出入的实参对象中（parameter）
         handleLocallyCachedOutputParameters(ms, key, parameter, boundSql);
       } else {
+        // 调用doQuery抽象方法
         list = queryFromDatabase(ms, parameter, rowBounds, resultHandler, key, boundSql);
       }
     } finally {
-      queryStack--;
+      queryStack--; // 查询完成，层数减少
     }
     if (queryStack == 0) {
+      // 延迟加载一级缓存中记录的嵌套查询的结果对象
       for (DeferredLoad deferredLoad : deferredLoads) {
         deferredLoad.load();
       }
       // issue #601
-      deferredLoads.clear();
+      deferredLoads.clear(); // 清空延迟加载集合
+      // 根据 localCacheScope 决定是否清空一级缓存
       if (configuration.getLocalCacheScope() == LocalCacheScope.STATEMENT) {
         // issue #482
         clearLocalCache();
@@ -187,28 +199,32 @@ public abstract class BaseExecutor implements Executor {
     if (closed) {
       throw new ExecutorException("Executor was closed.");
     }
+    // 创建DeferredLoad
     DeferredLoad deferredLoad = new DeferredLoad(resultObject, property, key, localCache, configuration, targetType);
     if (deferredLoad.canLoad()) {
+      // 一级缓存中已经记录了指定查询的结果，直接从缓存中加载对象
       deferredLoad.load();
     } else {
+      // 添加到队列中
       deferredLoads.add(new DeferredLoad(resultObject, property, key, localCache, configuration, targetType));
     }
   }
 
+  // 由 MappedStatement id，RowBounds offset，RowBounds limit， BoundSql sql（带?占位符的），实参，Environment id 组成
   @Override
   public CacheKey createCacheKey(MappedStatement ms, Object parameterObject, RowBounds rowBounds, BoundSql boundSql) {
     if (closed) {
       throw new ExecutorException("Executor was closed.");
     }
     CacheKey cacheKey = new CacheKey();
-    cacheKey.update(ms.getId());
-    cacheKey.update(rowBounds.getOffset());
-    cacheKey.update(rowBounds.getLimit());
-    cacheKey.update(boundSql.getSql());
+    cacheKey.update(ms.getId()); // 添加 MappedStatement id
+    cacheKey.update(rowBounds.getOffset()); // 添加 offset
+    cacheKey.update(rowBounds.getLimit()); // limit
+    cacheKey.update(boundSql.getSql()); // sql
     List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
     TypeHandlerRegistry typeHandlerRegistry = ms.getConfiguration().getTypeHandlerRegistry();
     // mimic DefaultParameterHandler logic
-    for (ParameterMapping parameterMapping : parameterMappings) {
+    for (ParameterMapping parameterMapping : parameterMappings) { // 遍历用户实参，保存到cacheKey中
       if (parameterMapping.getMode() != ParameterMode.OUT) {
         Object value;
         String propertyName = parameterMapping.getProperty();
@@ -232,6 +248,9 @@ public abstract class BaseExecutor implements Executor {
     return cacheKey;
   }
 
+  /**
+   * 检测是否缓存了结果
+   */
   @Override
   public boolean isCached(MappedStatement ms, CacheKey key) {
     return localCache.getObject(key) != null;
@@ -242,13 +261,16 @@ public abstract class BaseExecutor implements Executor {
     if (closed) {
       throw new ExecutorException("Cannot commit, transaction is already closed");
     }
+    // 清空缓存
     clearLocalCache();
+    // 执行缓存的SQL语句
     flushStatements();
-    if (required) {
+    if (required) { // 是否提交事务
       transaction.commit();
     }
   }
 
+  // 和commit一样
   @Override
   public void rollback(boolean required) throws SQLException {
     if (!closed) {
@@ -263,6 +285,9 @@ public abstract class BaseExecutor implements Executor {
     }
   }
 
+  /**
+   * 清空一级缓存
+   */
   @Override
   public void clearLocalCache() {
     if (!closed) {
@@ -323,15 +348,16 @@ public abstract class BaseExecutor implements Executor {
 
   private <E> List<E> queryFromDatabase(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, CacheKey key, BoundSql boundSql) throws SQLException {
     List<E> list;
+    // 给缓存添加占位符
     localCache.putObject(key, EXECUTION_PLACEHOLDER);
     try {
       list = doQuery(ms, parameter, rowBounds, resultHandler, boundSql);
     } finally {
-      localCache.removeObject(key);
+      localCache.removeObject(key); // 删除占位符
     }
-    localCache.putObject(key, list);
-    if (ms.getStatementType() == StatementType.CALLABLE) {
-      localOutputParameterCache.putObject(key, parameter);
+    localCache.putObject(key, list); // 保存真正结果的对象
+    if (ms.getStatementType() == StatementType.CALLABLE) { // 是否为存储过程调用
+      localOutputParameterCache.putObject(key, parameter); // 缓存输出类型的参数
     }
     return list;
   }
@@ -376,16 +402,22 @@ public abstract class BaseExecutor implements Executor {
       this.targetType = targetType;
     }
 
+    /**
+     * 缓存不为空，并且对象不是占位符
+     */
     public boolean canLoad() {
       return localCache.getObject(key) != null && localCache.getObject(key) != EXECUTION_PLACEHOLDER;
     }
 
+    /**
+     * 方法负责从缓存中加载结果对象，并设置到外层对象的相应属性中
+     */
     public void load() {
       @SuppressWarnings( "unchecked" )
       // we suppose we get back a List
-      List<Object> list = (List<Object>) localCache.getObject(key);
-      Object value = resultExtractor.extractObjectFromList(list, targetType);
-      resultObject.setValue(property, value);
+      List<Object> list = (List<Object>) localCache.getObject(key); // 获取缓存
+      Object value = resultExtractor.extractObjectFromList(list, targetType); // 将缓存的结果转换成指定类型
+      resultObject.setValue(property, value); // 设置对象对应的属性
     }
 
   }

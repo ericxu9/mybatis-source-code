@@ -36,6 +36,7 @@ public class RoutingStatementHandler implements StatementHandler {
 
   private final StatementHandler delegate;
 
+  // 根据类型选择不同的StatementHandler
   public RoutingStatementHandler(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
 
     switch (ms.getStatementType()) {

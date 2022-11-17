@@ -34,10 +34,12 @@ import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.transaction.Transaction;
 
 /**
+ * 传统的JDBC编程中，重用Statement对象是常用的一种优化手段，该优化手段可以减少SQL预编译的开销以及创建和销毁Statement对象的开销，从而提高性能。
  * @author Clinton Begin
  */
 public class ReuseExecutor extends BaseExecutor {
 
+  // key=sql,value=Statement对象
   private final Map<String, Statement> statementMap = new HashMap<String, Statement>();
 
   public ReuseExecutor(Configuration configuration, Transaction transaction) {
@@ -48,6 +50,7 @@ public class ReuseExecutor extends BaseExecutor {
   public int doUpdate(MappedStatement ms, Object parameter) throws SQLException {
     Configuration configuration = ms.getConfiguration();
     StatementHandler handler = configuration.newStatementHandler(this, ms, parameter, RowBounds.DEFAULT, null, null);
+    // 里面有重用判断
     Statement stmt = prepareStatement(handler, ms.getStatementLog());
     return handler.update(stmt);
   }
@@ -71,25 +74,26 @@ public class ReuseExecutor extends BaseExecutor {
   @Override
   public List<BatchResult> doFlushStatements(boolean isRollback) throws SQLException {
     for (Statement stmt : statementMap.values()) {
-      closeStatement(stmt);
+      closeStatement(stmt); // 关闭所有map中的 Statement 连接
     }
-    statementMap.clear();
+    statementMap.clear(); // 清空map
     return Collections.emptyList();
   }
 
   private Statement prepareStatement(StatementHandler handler, Log statementLog) throws SQLException {
     Statement stmt;
     BoundSql boundSql = handler.getBoundSql();
-    String sql = boundSql.getSql();
-    if (hasStatementFor(sql)) {
-      stmt = getStatement(sql);
-      applyTransactionTimeout(stmt);
+    String sql = boundSql.getSql(); // 获取sql语句
+    if (hasStatementFor(sql)) { // 判断是否缓存了相同模式的sql所对应的Statement
+      stmt = getStatement(sql); // 从map中取出
+      applyTransactionTimeout(stmt); // 修改超时时间
     } else {
       Connection connection = getConnection(statementLog);
+      // 创建新的 statement，并缓存到map中
       stmt = handler.prepare(connection, transaction.getTimeout());
       putStatement(sql, stmt);
     }
-    handler.parameterize(stmt);
+    handler.parameterize(stmt); // 处理占位符
     return stmt;
   }
 

@@ -35,18 +35,22 @@ import org.apache.ibatis.reflection.ExceptionUtil;
 public class SqlSessionManager implements SqlSessionFactory, SqlSession {
 
   private final SqlSessionFactory sqlSessionFactory;
+  // localSqlSession中的对象，使用JDK动态代理方式创建
   private final SqlSession sqlSessionProxy;
 
+  // 记录当前线程绑定的 SqlSession
   private ThreadLocal<SqlSession> localSqlSession = new ThreadLocal<SqlSession>();
 
   private SqlSessionManager(SqlSessionFactory sqlSessionFactory) {
     this.sqlSessionFactory = sqlSessionFactory;
+    // 生成 SqlSession代理对象
     this.sqlSessionProxy = (SqlSession) Proxy.newProxyInstance(
         SqlSessionFactory.class.getClassLoader(),
         new Class[]{SqlSession.class},
         new SqlSessionInterceptor());
   }
 
+  // 创建 SqlSessionManager 对象
   public static SqlSessionManager newInstance(Reader reader) {
     return new SqlSessionManager(new SqlSessionFactoryBuilder().build(reader, null, null));
   }
@@ -344,6 +348,7 @@ public class SqlSessionManager implements SqlSessionFactory, SqlSession {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+      // 获取当前线程绑定的 SqlSession，通过上面方法 startManagedSession 设置线程绑定
       final SqlSession sqlSession = SqlSessionManager.this.localSqlSession.get();
       if (sqlSession != null) {
         try {

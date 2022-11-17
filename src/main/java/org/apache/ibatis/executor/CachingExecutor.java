@@ -33,6 +33,7 @@ import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.transaction.Transaction;
 
 /**
+ * 二级缓存
  * @author Clinton Begin
  * @author Eduardo Macarron
  */
@@ -79,7 +80,7 @@ public class CachingExecutor implements Executor {
   @Override
   public <E> List<E> query(MappedStatement ms, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler) throws SQLException {
     BoundSql boundSql = ms.getBoundSql(parameterObject);
-    CacheKey key = createCacheKey(ms, parameterObject, rowBounds, boundSql);
+    CacheKey key = createCacheKey(ms, parameterObject, rowBounds, boundSql); // 创建cacheKey
     return query(ms, parameterObject, rowBounds, resultHandler, key, boundSql);
   }
 
@@ -92,15 +93,19 @@ public class CachingExecutor implements Executor {
   @Override
   public <E> List<E> query(MappedStatement ms, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, CacheKey key, BoundSql boundSql)
       throws SQLException {
-    Cache cache = ms.getCache();
+    Cache cache = ms.getCache(); // 获取查询语句所在namespace的二级缓存
+    // 是否开启了二级缓存
     if (cache != null) {
-      flushCacheIfRequired(ms);
+      flushCacheIfRequired(ms); // <select> 节点的配置 flushCache=true，决定是否清除二级缓存
       if (ms.isUseCache() && resultHandler == null) {
+        // 二级缓存不能保存输出类型的参数，如果查询操作调用了包含输出参数的存储过程，则保存
         ensureNoOutParams(ms, parameterObject, boundSql);
         @SuppressWarnings("unchecked")
-        List<E> list = (List<E>) tcm.getObject(cache, key);
+        List<E> list = (List<E>) tcm.getObject(cache, key); // 获取缓存
         if (list == null) {
+          // 缓存为空，查询数据库
           list = delegate.<E> query(ms, parameterObject, rowBounds, resultHandler, key, boundSql);
+          // 保存到暂存空间 entriesToAddOnCommit 里面，待提交后才保存到二级缓存中
           tcm.putObject(cache, key, list); // issue #578 and #116
         }
         return list;

@@ -276,6 +276,7 @@ public interface SqlSession extends Closeable {
   <T> T getMapper(Class<T> type);
 
   /**
+   * 获取 SqlSession 对应的数据库连接
    * Retrieves inner database connection
    * @return Connection
    */

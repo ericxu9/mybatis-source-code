@@ -51,6 +51,7 @@ public class TransactionalCacheManager {
     }
   }
 
+  // 获取 TransactionalCache， 没有则创建并保存
   private TransactionalCache getTransactionalCache(Cache cache) {
     TransactionalCache txCache = transactionalCaches.get(cache);
     if (txCache == null) {

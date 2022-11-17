@@ -571,9 +571,11 @@ public class Configuration {
     } else {
       executor = new SimpleExecutor(this, transaction);
     }
+    // 根据配置决定是否开启二级缓存功能
     if (cacheEnabled) {
       executor = new CachingExecutor(executor);
     }
+    // Interceptor 的 plugin 方法创建 Executor 的代理对象
     executor = (Executor) interceptorChain.pluginAll(executor);
     return executor;
   }

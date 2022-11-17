@@ -51,8 +51,11 @@ public class DefaultSqlSession implements SqlSession {
   private Configuration configuration;
   private Executor executor;
 
+  // 是否自动提交事务
   private boolean autoCommit;
+  // 当前缓存中是否有脏数据
   private boolean dirty;
+  // 记录打开的 Cursor对象，在 close方法中统一关闭
   private List<Cursor<?>> cursorList;
 
   public DefaultSqlSession(Configuration configuration, Executor executor, boolean autoCommit) {

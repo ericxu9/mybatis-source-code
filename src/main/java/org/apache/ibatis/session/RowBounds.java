@@ -16,6 +16,7 @@
 package org.apache.ibatis.session;
 
 /**
+ * 限制解析结果的范围,非MySQL 的limit物理分页
  * @author Clinton Begin
  */
 public class RowBounds {

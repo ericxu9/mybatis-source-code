@@ -58,11 +58,14 @@ public class SimpleExecutor extends BaseExecutor {
     Statement stmt = null;
     try {
       Configuration configuration = ms.getConfiguration();
+      // RoutingStatementHandler
       StatementHandler handler = configuration.newStatementHandler(wrapper, ms, parameter, rowBounds, resultHandler, boundSql);
+      // 初始化 Statement对象，并处理占位符
       stmt = prepareStatement(handler, ms.getStatementLog());
+      // 执行sql查询，并通过 ResultSetHandler返回结果集的映射
       return handler.<E>query(stmt, resultHandler);
     } finally {
-      closeStatement(stmt);
+      closeStatement(stmt); // 关闭
     }
   }
 
@@ -74,6 +77,7 @@ public class SimpleExecutor extends BaseExecutor {
     return handler.<E>queryCursor(stmt);
   }
 
+  // 不支持批量处理SQL
   @Override
   public List<BatchResult> doFlushStatements(boolean isRollback) throws SQLException {
     return Collections.emptyList();
@@ -83,7 +87,7 @@ public class SimpleExecutor extends BaseExecutor {
     Statement stmt;
     Connection connection = getConnection(statementLog);
     stmt = handler.prepare(connection, transaction.getTimeout());
-    handler.parameterize(stmt);
+    handler.parameterize(stmt); // 处理占位符
     return stmt;
   }
 

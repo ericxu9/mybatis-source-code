@@ -26,6 +26,8 @@ import org.apache.ibatis.logging.Log;
 import org.apache.ibatis.logging.LogFactory;
 
 /**
+ * 保存在某个SqlSession的某个事务中需要向某个二级缓存中添加的缓存数据
+ *
  * The 2nd level cache transactional buffer.
  * 
  * This class holds all cache entries that are to be added to the 2nd level cache during a Session.
@@ -40,9 +42,13 @@ public class TransactionalCache implements Cache {
 
   private static final Log log = LogFactory.getLog(TransactionalCache.class);
 
+  // 二级缓存对应的Cache对象
   private Cache delegate;
+  // 值为true时，则表示当前 TransactionalCache 不可查询，且提交事务时会将底层 Cache 清空
   private boolean clearOnCommit;
+  // 暂时记录添加到 TransactionalCache 中的数据。在事务提交时，会将其中的数据添加到二级缓存中
   private Map<Object, Object> entriesToAddOnCommit;
+  // 记录缓存未命中的 CacheKey 对象
   private Set<Object> entriesMissedInCache;
 
   public TransactionalCache(Cache delegate) {
@@ -65,15 +71,16 @@ public class TransactionalCache implements Cache {
   @Override
   public Object getObject(Object key) {
     // issue #116
+    // 从缓存中查找，如果为空则保存到未民众的cache中
     Object object = delegate.getObject(key);
     if (object == null) {
       entriesMissedInCache.add(key);
     }
     // issue #146
-    if (clearOnCommit) {
+    if (clearOnCommit) { // 为true，返回null
       return null;
     } else {
-      return object;
+      return object; // 从底层cache中查询到的值
     }
   }
 
@@ -82,6 +89,7 @@ public class TransactionalCache implements Cache {
     return null;
   }
 
+  // 暂存在 entriesToAddOnCommit 中
   @Override
   public void putObject(Object key, Object object) {
     entriesToAddOnCommit.put(key, object);
@@ -95,19 +103,22 @@ public class TransactionalCache implements Cache {
   @Override
   public void clear() {
     clearOnCommit = true;
-    entriesToAddOnCommit.clear();
+    entriesToAddOnCommit.clear(); // 清空暂存区
   }
 
   public void commit() {
-    if (clearOnCommit) {
+    if (clearOnCommit) { // 清空二级缓存
       delegate.clear();
     }
-    flushPendingEntries();
+    flushPendingEntries(); // 将暂存的 entriesToAddOnCommit 数据保存到二级缓存中
+    // 重置 clearOnCommit、entriesToAddOnCommit、entriesMissedInCache
     reset();
   }
 
   public void rollback() {
+    // 从二级缓存中删除 entriesMissedInCache 中的数据
     unlockMissedEntries();
+    // 重置 clearOnCommit、entriesToAddOnCommit、entriesMissedInCache
     reset();
   }
 
@@ -118,9 +129,11 @@ public class TransactionalCache implements Cache {
   }
 
   private void flushPendingEntries() {
+    // 将entriesToAddOnCommit保存到Cache中
     for (Map.Entry<Object, Object> entry : entriesToAddOnCommit.entrySet()) {
       delegate.putObject(entry.getKey(), entry.getValue());
     }
+    // 遍历entriesMissedInCache集合，将不包含在entriesToAddOnCommit中的添加到二级Cache中
     for (Object entry : entriesMissedInCache) {
       if (!entriesToAddOnCommit.containsKey(entry)) {
         delegate.putObject(entry, null);
