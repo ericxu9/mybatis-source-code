@@ -17,4 +17,5 @@ MyBatis 3.4.2 源码学习
 参考资料
 ----------
 
+[mybatis技术内幕](https://book.douban.com/subject/27087564/)
 [mybatis中文注释](https://github.com/tuguangquan/mybatis)
